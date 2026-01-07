@@ -1,0 +1,17 @@
+# Core
+pandas
+pyyaml
+requests
+tqdm
+Pillow
+
+# CLIP / Transformers
+torch
+transformers
+
+# LangChain + OpenAI
+langchain
+langchain-core
+langchain-openai
+openai
+datasets

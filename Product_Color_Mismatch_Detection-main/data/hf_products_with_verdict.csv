@@ -1,0 +1,21 @@
+id,gender,masterCategory,subCategory,articleType,baseColour,season,year,usage,productDisplayName,detected_color,detected_confidence,Verdict
+15970,Men,Apparel,Topwear,Shirts,Navy Blue,Fall,2011.0,Casual,Turtle Check Men Navy Blue Shirt,navy blue,0.6401376128196716,Match
+39386,Men,Apparel,Bottomwear,Jeans,Blue,Summer,2012.0,Casual,Peter England Men Party Blue Jeans,navy blue,0.44910067319869995,Match
+59263,Women,Accessories,Watches,Watches,Silver,Winter,2016.0,Casual,Titan Women Silver Watch,silver,0.414821982383728,Match
+21379,Men,Apparel,Bottomwear,Track Pants,Black,Fall,2011.0,Casual,Manchester United Men Solid Black Track Pants,navy blue,0.26523247361183167,Mismatch
+53759,Men,Apparel,Topwear,Tshirts,Grey,Summer,2012.0,Casual,Puma Men Grey T-shirt,gray,0.15540584921836853,Match
+1855,Men,Apparel,Topwear,Tshirts,Grey,Summer,2011.0,Casual,Inkfruit Mens Chain Reaction T-shirt,navy blue,0.11261182278394699,Mismatch
+30805,Men,Apparel,Topwear,Shirts,Green,Summer,2012.0,Ethnic,Fabindia Men Striped Green Shirt,olive green,0.6572938561439514,Match
+26960,Women,Apparel,Topwear,Shirts,Purple,Summer,2012.0,Casual,Jealous 21 Women Purple Shirt,burgundy,0.26984015107154846,Mismatch
+29114,Men,Accessories,Socks,Socks,Navy Blue,Summer,2012.0,Casual,Puma Men Pack of 3 Socks,navy blue,0.8479280471801758,Match
+30039,Men,Accessories,Watches,Watches,Black,Winter,2016.0,Casual,Skagen Men Black Watch,black,0.39134681224823,Match
+9204,Men,Footwear,Shoes,Casual Shoes,Black,Summer,2011.0,Casual,Puma Men Future Cat Remix SF Black Casual Shoes,black,0.4734533131122589,Match
+48123,Women,Accessories,Belts,Belts,Black,Summer,2012.0,Casual,Fossil Women Black Huarache Weave Belt,dark brown,0.30503201484680176,Mismatch
+18653,Men,Footwear,Flip Flops,Flip Flops,Black,Fall,2011.0,Casual,Fila Men Cush Flex Black Slippers,blue,0.21614135801792145,Mismatch
+47957,Women,Accessories,Bags,Handbags,Blue,Summer,2012.0,Casual,Murcia Women Blue Handbag,navy blue,0.42876768112182617,Match
+46885,Boys,Footwear,Flip Flops,Flip Flops,Navy Blue,Fall,2012.0,Casual,Ben 10 Boys Navy Blue Slippers,navy blue,0.5212180614471436,Match
+12369,Men,Apparel,Topwear,Shirts,Purple,Fall,2011.0,Formal,Reid & Taylor Men Check Purple Shirts,burgundy,0.3438799977302551,Mismatch
+29928,Men,Accessories,Watches,Watches,Black,Winter,2016.0,Casual,Police Men Black Dial Watch PL12889JVSB,dark brown,0.3881104290485382,Mismatch
+42419,Girls,Apparel,Topwear,Tops,White,Summer,2012.0,Casual,Gini and Jony Girls Knit White Top,mint green,0.35063785314559937,Mismatch
+51832,Women,Apparel,Innerwear,Bra,Beige,Summer,2016.0,Casual,Bwitch Beige Full-Coverage Bra BW335,beige,0.2512253224849701,Match
+47359,Women,Accessories,Bags,Handbags,Brown,Summer,2012.0,Casual,Baggit Women Brown Handbag,dark brown,0.4817321002483368,Match

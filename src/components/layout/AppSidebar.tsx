@@ -4,6 +4,7 @@ import {
   Camera, 
   FileText, 
   MessageSquare,
+  Palette,
   Settings,
   HelpCircle,
   Globe,
@@ -64,6 +65,12 @@ const toolsItems = [
     url: "/virtual-tryon", 
     icon: Camera,
     description: "Virtual try-on with AI"
+  },
+  { 
+    title: "Color Mismatch", 
+    url: "/color-mismatch", 
+    icon: Palette,
+    description: "Detect color mismatches"
   },
 ];
 

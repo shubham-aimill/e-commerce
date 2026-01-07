@@ -10,6 +10,7 @@ import AIPhotoshoot from "./pages/AIPhotoshoot";
 import ImageToText from "./pages/ImageToText";
 import SQLAgent from "./pages/SQLAgent";
 import VirtualTryOn from "./pages/VirtualTryOn";
+import ColorMismatch from "./pages/ColorMismatch";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/content" element={<ImageToText />} />
             <Route path="/agent" element={<SQLAgent />} />
             <Route path="/virtual-tryon" element={<VirtualTryOn />} />
+            <Route path="/color-mismatch" element={<ColorMismatch />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<NotFound />} />
