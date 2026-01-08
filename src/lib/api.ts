@@ -95,4 +95,61 @@ export const apiClient = {
   delete: <T>(path: string, options?: RequestOptions) => request<T>(path, "DELETE", options),
 };
 
+// VTO API Client - Virtual Try-On endpoints
+const VTO_BASE_URL = import.meta.env.VITE_VTO_API_URL ?? "http://localhost:8000";
+
+export const vtoApi = {
+  generateTryOn: async (
+    formData: FormData,
+    options?: RequestOptions
+  ): Promise<Blob> => {
+    const url = `${VTO_BASE_URL}/generate-tryon`;
+    const headers: HeadersInit = {
+      ...(options?.headers ?? {}),
+    };
+
+    if (options?.authToken) {
+      headers["Authorization"] = `Bearer ${options.authToken}`;
+    }
+
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+
+    if (!res.ok) {
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        try {
+          const body = await res.json();
+          throw new ApiError(
+            body?.error?.message || body?.detail || `Request failed with status ${res.status}`,
+            res.status,
+            body?.error?.code,
+            body?.error?.details
+          );
+        } catch (e) {
+          if (e instanceof ApiError) throw e;
+          throw new ApiError(`Request failed with status ${res.status}`, res.status);
+        }
+      }
+      throw new ApiError(`Request failed with status ${res.status}`, res.status);
+    }
+
+    return await res.blob();
+  },
+
+  healthCheck: async (): Promise<{ status: string; model: string }> => {
+    const url = `${VTO_BASE_URL}/health`;
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      throw new ApiError(`Health check failed with status ${res.status}`, res.status);
+    }
+    
+    return await res.json();
+  },
+};
+
 

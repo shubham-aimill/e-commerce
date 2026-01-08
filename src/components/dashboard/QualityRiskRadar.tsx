@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
 
 type IssueType = "Image Mismatch" | "Attribute Error" | "Low Resolution" | "Missing Keywords";
 
@@ -14,15 +16,21 @@ interface QualityRiskRadarResponse {
 }
 
 function getRiskColor(value: number) {
-  if (value >= 70) return "bg-destructive/80 text-destructive-foreground";
-  if (value >= 40) return "bg-warning/80 text-warning-foreground";
-  return "bg-success/80 text-success-foreground";
+  if (value >= 70) return "text-destructive";
+  if (value >= 40) return "text-warning";
+  return "text-success";
 }
 
 function getRiskBg(value: number) {
-  if (value >= 70) return "bg-destructive/10";
-  if (value >= 40) return "bg-warning/10";
-  return "bg-success/10";
+  if (value >= 70) return "bg-destructive";
+  if (value >= 40) return "bg-warning";
+  return "bg-success";
+}
+
+function getRiskIntensity(value: number): "high" | "medium" | "low" {
+  if (value >= 70) return "high";
+  if (value >= 40) return "medium";
+  return "low";
 }
 
 export function QualityRiskRadar() {
@@ -53,136 +61,153 @@ export function QualityRiskRadar() {
   const isUsingDummy = isError || (!data && !isLoading);
 
   return (
-    <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-foreground">Content Quality Risk Radar</h3>
-            {data ? (
-              <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-                API
-              </Badge>
-            ) : isError ? (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
-                Demo
-              </Badge>
-            ) : null}
+    <TooltipProvider>
+      <div className="glass-card rounded-xl p-8 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
+        <div className="flex items-start justify-between mb-8">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h3 className="text-2xl font-bold text-foreground tracking-tight">Content Quality Risk Radar</h3>
+              {data ? (
+                <Badge variant="default" className="text-[10px] px-2 py-0.5 bg-success/20 text-success border-success/30 font-medium">
+                  Live
+                </Badge>
+              ) : isError ? (
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground border-muted font-medium">
+                  Demo
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-sm text-muted-foreground">Issue distribution by category with risk levels</p>
           </div>
-          <p className="text-sm text-muted-foreground">Issue distribution by category</p>
+          <div className="flex gap-3 text-xs bg-muted/50 p-2 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-success" />
+              <span className="text-muted-foreground font-medium">Low (&lt;40%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-warning" />
+              <span className="text-muted-foreground font-medium">Medium (40-70%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-destructive" />
+              <span className="text-muted-foreground font-medium">High (&gt;70%)</span>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-success/80" />
-            <span className="text-muted-foreground">Low (&lt;40%)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-warning/80" />
-            <span className="text-muted-foreground">Medium</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-destructive/80" />
-            <span className="text-muted-foreground">High (&gt;70%)</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="text-left text-xs font-medium text-muted-foreground pb-3 pr-4">
-                Category
-              </th>
-              {issueTypes.length === 0 && isLoading && (
-                <>
-                  {Array.from({ length: 4 }).map((_, idx) => (
-                    <th
-                      key={idx}
-                      className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 min-w-[100px]"
-                    >
-                      &nbsp;
-                    </th>
-                  ))}
-                </>
-              )}
-              {issueTypes.map((type) => (
-                <th
-                  key={type}
-                  className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 min-w-[100px]"
-                >
-                  {type}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && categories.length === 0 && (
-              <>
-                {Array.from({ length: 5 }).map((_, rowIdx) => (
-                  <tr key={rowIdx} className="border-t border-border/30">
-                    <td className="py-3 pr-4">
-                      <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                    </td>
+        <div className="space-y-6">
+          {isLoading && categories.length === 0 && (
+            <>
+              {Array.from({ length: 5 }).map((_, rowIdx) => (
+                <div key={rowIdx} className="space-y-2">
+                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                  <div className="grid grid-cols-4 gap-3">
                     {Array.from({ length: 4 }).map((_, colIdx) => (
-                      <td key={colIdx} className="py-3 px-2">
-                        <div className="h-10 rounded-lg bg-muted animate-pulse" />
-                      </td>
+                      <div key={colIdx} className="h-16 rounded-lg bg-muted animate-pulse" />
                     ))}
-                  </tr>
-                ))}
-              </>
-            )}
-            {categories.map((category) => (
-              <tr key={category} className="border-t border-border/30">
-                <td className="py-3 pr-4">
-                  <span className="text-sm font-medium text-foreground">{category}</span>
-                </td>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {categories.map((category) => (
+            <div key={category} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-base font-semibold text-foreground">{category}</h4>
+                <span className="text-xs text-muted-foreground">
+                  {Object.values(riskData[category] || {}).reduce((sum, val) => sum + val, 0) / issueTypes.length}% avg
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {issueTypes.map((type) => {
                   const value = riskData[category]?.[type] ?? 0;
+                  const intensity = getRiskIntensity(value);
                   return (
-                    <td key={type} className="py-3 px-2">
-                      <div className={cn(
-                        "flex items-center justify-center h-10 rounded-lg text-sm font-medium transition-all hover:scale-105",
-                        getRiskBg(value)
-                      )}>
-                        <span className={cn(
-                          "px-2 py-1 rounded text-xs font-semibold",
-                          getRiskColor(value)
-                        )}>
-                          {value}%
-                        </span>
-                      </div>
-                    </td>
+                    <Tooltip key={type}>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className={cn(
+                            "heat-cell p-4 border border-border/50 rounded-xl",
+                            "hover:border-opacity-100 transition-all cursor-pointer",
+                            intensity === "high" && "bg-destructive/5 border-destructive/20",
+                            intensity === "medium" && "bg-warning/5 border-warning/20",
+                            intensity === "low" && "bg-success/5 border-success/20"
+                          )}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${category} - ${type}: ${value}%`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-muted-foreground truncate pr-2">
+                              {type}
+                            </span>
+                            <span className={cn(
+                              "text-sm font-bold tabular-nums",
+                              getRiskColor(value)
+                            )}>
+                              {value}%
+                            </span>
+                          </div>
+                          <div className="progress-bar">
+                            <div 
+                              className={cn(
+                                "progress-fill",
+                                getRiskBg(value)
+                              )}
+                              style={{ width: `${value}%` }}
+                              aria-valuenow={value}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              role="progressbar"
+                            />
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-medium">{category} - {type}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Risk Level: {intensity.toUpperCase()} ({value}%)
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <div className="mt-4 pt-4 border-t border-border/30 flex gap-2">
-        {["Amazon.in", "Flipkart", "Takealot"].map((mp) => (
-          <button
-            key={mp}
-            onClick={() => {
-              setSelectedMarketplace(mp);
-              toast({
-                title: "Marketplace changed",
-                description: `Viewing data for ${mp}`,
-              });
-            }}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-colors",
-              selectedMarketplace === mp
-                ? "bg-primary/10 text-primary hover:bg-primary/20"
-                : "text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {mp}
-          </button>
-        ))}
+        <div className="mt-6 pt-6 border-t border-border/50">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">Filter by Marketplace</span>
+            <div className="flex gap-2">
+              {["Amazon.in", "Flipkart", "Takealot"].map((mp) => (
+                <button
+                  key={mp}
+                  onClick={() => {
+                    setSelectedMarketplace(mp);
+                    toast({
+                      title: "Marketplace changed",
+                      description: `Viewing data for ${mp}`,
+                    });
+                  }}
+                  className={cn(
+                    "px-4 py-2 text-xs font-semibold rounded-lg transition-all",
+                    "hover:scale-105 active:scale-95",
+                    selectedMarketplace === mp
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                  aria-pressed={selectedMarketplace === mp}
+                  aria-label={`Filter by ${mp}`}
+                >
+                  {mp}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

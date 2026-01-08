@@ -100,21 +100,21 @@ export function ImpactMetrics() {
   const roi = data?.roi || dummyRoi;
   const isUsingDummy = error || (!data && !isLoading);
   return (
-    <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'forwards' }}>
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-foreground">AI Business Impact</h3>
+    <div className="glass-card rounded-xl p-8 opacity-0 animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'forwards' }}>
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <h3 className="text-2xl font-bold text-foreground tracking-tight">AI Business Impact</h3>
           {data ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-              API
+            <Badge variant="default" className="text-[10px] px-2 py-0.5 bg-success/20 text-success border-success/30 font-medium">
+              Live
             </Badge>
           ) : isUsingDummy ? (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
+            <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground border-muted font-medium">
               Demo
             </Badge>
           ) : null}
         </div>
-        <p className="text-sm text-muted-foreground">Measurable outcomes from automation</p>
+        <p className="text-sm text-muted-foreground mt-1">Measurable outcomes from automation</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -124,26 +124,26 @@ export function ImpactMetrics() {
             <div 
               key={metric.label}
               className={cn(
-                "p-4 rounded-xl bg-gradient-to-br transition-all hover:scale-[1.02]",
+                "p-5 rounded-xl border border-border/50 bg-gradient-to-br transition-all hover:scale-[1.02] hover:shadow-md",
                 "opacity-0 animate-scale-in",
                 metric.gradient
               )}
               style={{ animationDelay: `${600 + index * 100}ms`, animationFillMode: 'forwards' }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-card/80 flex items-center justify-center">
-                  <Icon className="w-4 h-4 text-foreground" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-card/80 flex items-center justify-center border border-border/50">
+                  <Icon className="w-5 h-5 text-foreground" />
                 </div>
               </div>
               
               <div className="space-y-1">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-foreground">{metric.value}</span>
+                  <span className="text-3xl font-bold text-foreground tracking-tight">{metric.value}</span>
                   {metric.unit && (
-                    <span className="text-sm text-muted-foreground">{metric.unit}</span>
+                    <span className="text-sm text-muted-foreground font-medium">{metric.unit}</span>
                   )}
                 </div>
-                <div className="text-sm font-medium text-foreground">{metric.label}</div>
+                <div className="text-sm font-semibold text-foreground">{metric.label}</div>
                 <div className="text-xs text-muted-foreground">{metric.description}</div>
               </div>
             </div>
@@ -152,18 +152,22 @@ export function ImpactMetrics() {
       </div>
 
       {roi && (
-        <div className="mt-4 pt-4 border-t border-border/30">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">ROI This {roi.period.charAt(0).toUpperCase() + roi.period.slice(1)}</span>
-            <span className="font-bold text-success">+{roi.percentage}%</span>
+        <div className="mt-6 pt-6 border-t border-border/50">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-foreground">ROI This {roi.period.charAt(0).toUpperCase() + roi.period.slice(1)}</span>
+            <span className="text-lg font-bold text-success">+{roi.percentage}%</span>
           </div>
-          <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+          <div className="progress-bar h-3">
             <div 
-              className="h-full bg-gradient-to-r from-sand-500 to-sand-600 rounded-full transition-all duration-1000"
+              className="progress-fill bg-gradient-to-r from-primary to-primary-700 rounded-full transition-all duration-1000"
               style={{ width: `${roi.targetAchievement}%` }}
+              aria-valuenow={roi.targetAchievement}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              role="progressbar"
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{roi.targetAchievement}% of annual target achieved</p>
+          <p className="text-xs text-muted-foreground mt-2 font-medium">{roi.targetAchievement}% of annual target achieved</p>
         </div>
       )}
     </div>

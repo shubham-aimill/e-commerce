@@ -125,32 +125,32 @@ export function AlertsList() {
   const isUsingDummy = error || (!data && !isLoading);
 
   return (
-    <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-foreground">Real-Time Quality Alerts</h3>
+    <div className="glass-card rounded-xl p-8 opacity-0 animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
+      <div className="flex items-start justify-between mb-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h3 className="text-2xl font-bold text-foreground tracking-tight">Real-Time Quality Alerts</h3>
             {data ? (
-              <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-                API
+              <Badge variant="default" className="text-[10px] px-2 py-0.5 bg-success/20 text-success border-success/30 font-medium">
+                Live
               </Badge>
             ) : isUsingDummy ? (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
+              <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground border-muted font-medium">
                 Demo
               </Badge>
             ) : null}
           </div>
           <p className="text-sm text-muted-foreground">Live content issues requiring attention</p>
         </div>
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="gap-2 px-3 py-1.5">
           <span className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
-          {criticalCount} Critical
+          <span className="font-semibold">{criticalCount} Critical</span>
         </Badge>
       </div>
 
-      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
         {alerts.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-12">
             <p className="text-sm text-muted-foreground">No alerts at this time</p>
           </div>
         ) : (
@@ -162,46 +162,46 @@ export function AlertsList() {
             <div 
               key={alert.id}
               className={cn(
-                "p-4 rounded-lg border border-border/50 transition-all hover:shadow-md",
+                "p-5 rounded-xl border border-border/50 transition-all hover:shadow-md hover:border-opacity-100",
                 "opacity-0 animate-slide-up",
                 config.bg
               )}
               style={{ animationDelay: `${500 + index * 100}ms`, animationFillMode: 'forwards' }}
             >
-              <div className="flex items-start gap-3">
-                <div className={cn("w-2 h-2 rounded-full mt-2 flex-shrink-0", config.dot)} />
+              <div className="flex items-start gap-4">
+                <div className={cn("w-3 h-3 rounded-full mt-1.5 flex-shrink-0", config.dot)} />
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
+                  <div className="flex items-center gap-2 mb-2">
+                    <code className="text-xs font-mono bg-muted px-2 py-1 rounded-md text-foreground font-semibold">
                       {alert.sku}
                     </code>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs font-medium">
                       {alert.marketplace}
                     </Badge>
                   </div>
                   
-                  <p className="text-sm text-foreground leading-relaxed">
+                  <p className="text-sm text-foreground leading-relaxed mb-3">
                     {alert.message}
                   </p>
                   
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      <span>{alert.timestampRelative || alert.timestamp}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span className="font-medium">{alert.timestampRelative || alert.timestamp}</span>
                     </div>
                     
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="h-7 text-xs gap-1"
+                      className="h-8 text-xs gap-1.5 font-medium"
                       onClick={() => toast({
                         title: "View details",
                         description: `Viewing details for ${alert.sku}`,
                       })}
                     >
                       View Details
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>

@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
+import { VirtualTryOnForm } from "@/components/vto/VirtualTryOnForm";
 
 interface PhotoshootKPI {
   label: string;
@@ -441,7 +442,7 @@ export default function AIPhotoshoot() {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            AI Model Photoshoot Generator
+            AI Image Generation
           </h1>
           <Badge className="bg-ai/10 text-ai border-ai/20">
             <Sparkles className="w-3 h-3 mr-1" />
@@ -458,11 +459,19 @@ export default function AIPhotoshoot() {
           )}
         </div>
         <p className="text-muted-foreground">
-          Generate professional product imagery with AI models for every marketplace
+          Generate professional product imagery and virtual try-ons with AI
         </p>
       </div>
 
-      {/* KPI Row */}
+      {/* Main Tabs */}
+      <Tabs defaultValue="photoshoot" className="space-y-6">
+        <TabsList className="w-full grid grid-cols-2 max-w-md">
+          <TabsTrigger value="photoshoot">AI Photoshoot</TabsTrigger>
+          <TabsTrigger value="tryon">Virtual Try-On</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="photoshoot" className="space-y-6 mt-0">
+          {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {kpisLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
@@ -833,6 +842,12 @@ export default function AIPhotoshoot() {
           </div>
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="tryon" className="space-y-6 mt-0">
+          <VirtualTryOnForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
