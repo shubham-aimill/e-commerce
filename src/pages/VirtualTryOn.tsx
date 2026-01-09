@@ -39,7 +39,7 @@ export default function VirtualTryOn() {
     onSuccess: (data) => {
       toast({
         title: "Backend Online",
-        description: `Model: ${data.model}`,
+        description: `Gemini: ${data.gemini_enabled ? "Enabled" : "Disabled"}`,
       });
     },
     onError: (error: Error) => {
@@ -355,7 +355,7 @@ export default function VirtualTryOn() {
             {healthData && (
               <div className="mt-3 p-2 bg-success/10 rounded-lg text-xs">
                 <div className="font-medium text-success">Status: {healthData.status}</div>
-                <div className="text-muted-foreground">Model: {healthData.model}</div>
+                <div className="text-muted-foreground">Gemini: {healthData.gemini_enabled ? "Enabled" : "Disabled"}</div>
               </div>
             )}
             {healthError && (

@@ -1,8 +1,8 @@
-const VTO_BASE_URL = import.meta.env.VITE_VTO_API_URL ?? "http://127.0.0.1:8000";
+const VTO_BASE_URL = import.meta.env.VITE_VTO_API_URL ?? "https://vto-jshi.onrender.com";
 
 export interface VtoHealthResponse {
   status: string;
-  model: string;
+  gemini_enabled: boolean;
 }
 
 export class VtoApiError extends Error {

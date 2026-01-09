@@ -96,7 +96,7 @@ export const apiClient = {
 };
 
 // VTO API Client - Virtual Try-On endpoints
-const VTO_BASE_URL = import.meta.env.VITE_VTO_API_URL ?? "http://localhost:8000";
+const VTO_BASE_URL = import.meta.env.VITE_VTO_API_URL ?? "https://vto-jshi.onrender.com";
 
 export const vtoApi = {
   generateTryOn: async (
@@ -140,7 +140,7 @@ export const vtoApi = {
     return await res.blob();
   },
 
-  healthCheck: async (): Promise<{ status: string; model: string }> => {
+  healthCheck: async (): Promise<{ status: string; gemini_enabled: boolean }> => {
     const url = `${VTO_BASE_URL}/health`;
     const res = await fetch(url);
     
