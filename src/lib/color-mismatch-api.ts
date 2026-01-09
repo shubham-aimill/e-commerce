@@ -24,6 +24,17 @@ export interface DetectAndMatchResult {
   verdict: "Match" | "Mismatch";
 }
 
+export interface DatasetRow {
+  // Flexible shape – we expose raw CSV records
+  [key: string]: unknown;
+}
+
+export interface DatasetResponse {
+  rows: DatasetRow[];
+  color_column: string | null;
+  name_column: string | null;
+}
+
 export class ColorMismatchApiError extends Error {
   status: number;
   detail?: string;
@@ -92,6 +103,43 @@ export async function checkColorMismatchHealth(): Promise<ColorMismatchHealthRes
       if (isNetworkError) {
         throw new ColorMismatchApiError(
           `Backend offline at ${COLOR_MISMATCH_BASE_URL}. The CLIP model may still be loading (takes 1-2 minutes on first run).`,
+          0
+        );
+      }
+    }
+    throw new ColorMismatchApiError(
+      error instanceof Error ? error.message : "Unknown error occurred",
+      0
+    );
+  }
+}
+
+/**
+ * Fetch the processed dataset (CSV) used by the color mismatch detector.
+ */
+export async function getColorMismatchDataset(): Promise<DatasetResponse> {
+  const url = `${COLOR_MISMATCH_BASE_URL}/dataset`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+    });
+
+    return await handleColorMismatchResponse<DatasetResponse>(res);
+  } catch (error) {
+    if (error instanceof ColorMismatchApiError) {
+      throw error;
+    }
+    if (error instanceof TypeError) {
+      const isNetworkError =
+        error.message.includes("fetch") ||
+        error.message.includes("Failed to fetch") ||
+        error.message.includes("NetworkError") ||
+        error.message.includes("Network request failed");
+
+      if (isNetworkError) {
+        throw new ColorMismatchApiError(
+          `Could not load dataset from FastAPI backend at ${COLOR_MISMATCH_BASE_URL}. Please ensure the server is running.`,
           0
         );
       }
@@ -241,3 +289,15 @@ export async function detectAndMatch(
   }
 }
 
+/**
+ * Get product image URL from backend
+ */
+export function getProductImageUrl(productId: string | number, index?: number): string {
+  const id = String(productId);
+  const params = new URLSearchParams();
+  if (index !== undefined) {
+    params.set("index", String(index));
+  }
+  const query = params.toString();
+  return `${COLOR_MISMATCH_BASE_URL}/image/${id}${query ? `?${query}` : ""}`;
+}

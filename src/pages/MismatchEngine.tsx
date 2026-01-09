@@ -24,6 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
+import { getColorMismatchDataset, type DatasetResponse } from "@/lib/color-mismatch-api";
+import ProductImage from "@/components/ProductImage";
 
 interface MismatchKPI {
   label: string;
@@ -209,6 +211,17 @@ export default function MismatchEngine() {
     queryKey: ["mismatch", "localization", selectedSku],
     queryFn: () => apiClient.get<LocalizationResponse>(`/mismatch/sku/${selectedSku}/localization`),
     enabled: !!selectedSku,
+  });
+
+  // Load color-mismatch CSV to surface it under the Image-Description Audit Table
+  const {
+    data: colorCsv,
+    isLoading: isColorCsvLoading,
+    isError: isColorCsvError,
+    error: colorCsvError,
+  } = useQuery<DatasetResponse, Error>({
+    queryKey: ["color-mismatch-dataset-summary"],
+    queryFn: getColorMismatchDataset,
   });
 
   // Export mutation
@@ -702,6 +715,109 @@ export default function MismatchEngine() {
                   )}
                 </tbody>
               </table>
+            </div>
+            {/* Color mismatch CSV snapshot from Product_Color_Mismatch_Detection */}
+            <div className="border-t border-border/40 bg-muted/10">
+              <div className="p-4 flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">
+                    Color Mismatch CSV (offline pipeline)
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Snapshot of the processed CSV used by the Product Color Mismatch detector.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  CSV
+                </Badge>
+              </div>
+
+              {isColorCsvLoading && (
+                <div className="px-4 pb-4 text-xs text-muted-foreground">
+                  Loading CSV snapshot from backend...
+                </div>
+              )}
+
+              {isColorCsvError && (
+                <div className="px-4 pb-4 text-xs text-destructive">
+                  {colorCsvError?.message ?? "Failed to load CSV data"}
+                </div>
+              )}
+
+              {colorCsv && !isColorCsvLoading && !isColorCsvError && (
+                <div className="overflow-x-auto px-4 pb-4">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40">
+                        <th className="text-left font-medium text-muted-foreground p-2">
+                          Image
+                        </th>
+                        <th className="text-left font-medium text-muted-foreground p-2">
+                          ID
+                        </th>
+                        <th className="text-left font-medium text-muted-foreground p-2">
+                          Product
+                        </th>
+                        <th className="text-left font-medium text-muted-foreground p-2">
+                          Catalog Color
+                        </th>
+                        <th className="text-left font-medium text-muted-foreground p-2">
+                          Detected Color
+                        </th>
+                        <th className="text-left font-medium text-muted-foreground p-2">
+                          Verdict
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {colorCsv.rows.slice(0, 20).map((row, idx) => (
+                        <tr
+                          key={(row["id"] as string | number | undefined) ?? idx}
+                          className="border-t border-border/20"
+                        >
+                          <td className="p-2">
+                            <ProductImage
+                              productId={row["id"] ?? ""}
+                              index={idx}
+                              alt={String(row["productDisplayName"] ?? "Product")}
+                              className="w-16 h-16"
+                              fallbackClassName="w-16 h-16"
+                            />
+                          </td>
+                          <td className="p-2 font-mono">
+                            {row["id"] ?? "-"}
+                          </td>
+                          <td className="p-2">
+                            {String(row["productDisplayName"] ?? "")}
+                          </td>
+                          <td className="p-2">
+                            {String(
+                              row[colorCsv.color_column ?? "baseColour"] ?? ""
+                            )}
+                          </td>
+                          <td className="p-2">
+                            {String(row["detected_color"] ?? "")}
+                          </td>
+                          <td className="p-2">
+                            <Badge
+                              variant={
+                                row["Verdict"] === "Match" ? "outline" : "destructive"
+                              }
+                              className="text-[10px]"
+                            >
+                              {String(row["Verdict"] ?? "")}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-2 text-[10px] text-muted-foreground">
+                    Showing first 20 rows from{" "}
+                    <code>hf_products_with_verdict.csv</code>.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
