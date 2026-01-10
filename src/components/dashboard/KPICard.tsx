@@ -74,7 +74,7 @@ export function KPICard({
   return (
     <div 
       className={cn(
-        "metric-card border-l-4",
+        "metric-card border-l-4 h-full flex flex-col",
         getStatusColor(),
         "opacity-0 animate-fade-in group"
       )}
@@ -105,12 +105,12 @@ export function KPICard({
         </div>
       </div>
       
-      <div className="space-y-3">
-        <div>
+      <div className="space-y-3 flex-1 flex flex-col">
+        <div className="flex-1">
           <h3 className="text-3xl font-bold text-foreground mb-1 tracking-tight" aria-label={`Value: ${value}`}>
             {value}
           </h3>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-sm font-medium text-muted-foreground line-clamp-2">{title}</p>
         </div>
 
         {/* Sparkline Chart */}

@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Bell, Shield, Globe, Palette, Loader2 } from "lucide-react";
+import { User, Bell, Shield, Globe, Palette, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface UserSettings {
   profile: {
@@ -139,48 +140,66 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-[800px] mx-auto">
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Settings</h1>
-          {settingsData ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-              API
-            </Badge>
-          ) : error ? (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
-              Demo
-            </Badge>
-          ) : null}
-        </div>
-        <p className="text-muted-foreground">Manage your account and platform preferences</p>
-      </div>
-
-      <div className="space-y-4">
-        {settingsItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.title}
-              className="glass-card rounded-xl p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors cursor-pointer"
-              onClick={item.onClick}
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-foreground">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-              </div>
-              {item.badge && (
-                <Badge variant="secondary">{item.badge}</Badge>
-              )}
-              {updateMutation.isPending && item.title === "Notifications" && (
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              )}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4 lg:p-8 space-y-8 max-w-[1400px] mx-auto">
+        {/* Enhanced Header */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+              <User className="w-6 h-6 text-primary" />
             </div>
-          );
-        })}
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
+                Settings
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage your account and platform preferences
+              </p>
+            </div>
+            {settingsData && (
+              <Badge className="bg-success/10 text-success border-success/20 px-3 py-1.5 ml-auto">
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                API Connected
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {settingsItems.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.title}
+                className={cn(
+                  "rounded-xl p-6 lg:p-8 border-2 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg",
+                  "flex items-center gap-4 hover:border-primary/50 hover:bg-primary/5 hover:shadow-xl transition-all duration-300 hover:scale-[1.01] cursor-pointer",
+                  "animate-fade-in"
+                )}
+                style={{ 
+                  animationDelay: `${index * 100}ms`, 
+                  animationFillMode: 'forwards',
+                  animationDuration: '400ms'
+                }}
+                onClick={item.onClick}
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-7 h-7 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground text-lg mb-1">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                </div>
+                {item.badge && (
+                  <Badge variant="secondary" className="font-semibold">{item.badge}</Badge>
+                )}
+                {updateMutation.isPending && item.title === "Notifications" && (
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

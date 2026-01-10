@@ -50,15 +50,18 @@ export default function ColorMismatch() {
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState<"test" | "browse">("test");
 
-  // Dataset query
+  // Dataset query - don't auto-fetch, let user trigger it
   const {
     data: dataset,
     isLoading: isDatasetLoading,
     isError: isDatasetError,
     error: datasetError,
+    refetch: refetchDataset,
   } = useQuery<DatasetResponse, Error>({
     queryKey: ["color-mismatch-dataset"],
     queryFn: getColorMismatchDataset,
+    enabled: false, // Don't auto-fetch - user must click to load
+    retry: false,
   });
 
   const filteredDataset = useMemo(() => {
@@ -246,76 +249,84 @@ export default function ColorMismatch() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="p-4 lg:p-6 space-y-6 max-w-[1800px] mx-auto">
+      <div className="p-4 lg:p-8 space-y-8 max-w-[1920px] mx-auto">
         {/* Enhanced Header */}
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-ai/10 border border-ai/20">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-ai/10 to-ai/5 border border-ai/20">
                   <Palette className="w-6 h-6 text-ai" />
                 </div>
                 <div>
                   <h1 className="text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
                     Color Mismatch Detection
                   </h1>
-                  <p className="text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     AI-powered color detection and matching for e-commerce products
                   </p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge className="bg-ai/10 text-ai border-ai/20 px-3 py-1">
-                <Sparkles className="w-3 h-3 mr-1.5" />
+              <Badge className="bg-gradient-to-w from-ai/10 to-ai/5 text-ai border-ai/20 px-3 py-1.5">
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                 AI Powered
               </Badge>
               {healthData && (
-                <Badge className="bg-success/10 text-success border-success/20 px-3 py-1">
-                  <CheckCircle className="w-3 h-3 mr-1.5" />
+                <Badge className="bg-success/10 text-success border-success/20 px-3 py-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                   Online
                 </Badge>
               )}
             </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Enhanced Stats Cards */}
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-4 bg-gradient-to-br from-background to-muted/30 border-border/50">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6">
+              <Card className="p-5 bg-gradient-to-br from-background to-muted/30 border-2 border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Total Products</p>
-                    <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Total Products</p>
+                    <p className="text-3xl font-bold text-foreground">{stats.total}</p>
                   </div>
-                  <FileText className="w-8 h-8 text-muted-foreground/50" />
+                  <div className="p-3 rounded-xl bg-muted/50">
+                    <FileText className="w-8 h-8 text-muted-foreground/60" />
+                  </div>
                 </div>
               </Card>
-              <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+              <Card className="p-5 bg-gradient-to-br from-success/10 to-success/5 border-2 border-success/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Matches</p>
-                    <p className="text-2xl font-bold text-success">{stats.matches}</p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Matches</p>
+                    <p className="text-3xl font-bold text-success">{stats.matches}</p>
                   </div>
-                  <CheckCircle className="w-8 h-8 text-success/50" />
+                  <div className="p-3 rounded-xl bg-success/20">
+                    <CheckCircle className="w-8 h-8 text-success/70" />
+                  </div>
                 </div>
               </Card>
-              <Card className="p-4 bg-gradient-to-br from-destructive/5 to-destructive/10 border-destructive/20">
+              <Card className="p-5 bg-gradient-to-br from-destructive/10 to-destructive/5 border-2 border-destructive/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Mismatches</p>
-                    <p className="text-2xl font-bold text-destructive">{stats.mismatches}</p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Mismatches</p>
+                    <p className="text-3xl font-bold text-destructive">{stats.mismatches}</p>
                   </div>
-                  <AlertCircle className="w-8 h-8 text-destructive/50" />
+                  <div className="p-3 rounded-xl bg-destructive/20">
+                    <AlertCircle className="w-8 h-8 text-destructive/70" />
+                  </div>
                 </div>
               </Card>
-              <Card className="p-4 bg-gradient-to-br from-ai/5 to-ai/10 border-ai/20">
+              <Card className="p-5 bg-gradient-to-br from-ai/10 to-ai/5 border-2 border-ai/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Match Rate</p>
-                    <p className="text-2xl font-bold text-ai">{stats.matchRate}%</p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Match Rate</p>
+                    <p className="text-3xl font-bold text-ai">{stats.matchRate}%</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-ai/50" />
+                  <div className="p-3 rounded-xl bg-ai/20">
+                    <TrendingUp className="w-8 h-8 text-ai/70" />
+                  </div>
                 </div>
               </Card>
             </div>
@@ -338,12 +349,14 @@ export default function ColorMismatch() {
           {/* Tab 1: Live Testing */}
           <TabsContent value="test" className="space-y-6 mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Sidebar - Controls */}
+              {/* Enhanced Left Sidebar - Controls */}
               <div className="lg:col-span-1 space-y-4">
-                <Card className="p-5 border-border/50 bg-card/50 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Upload className="w-5 h-5 text-ai" />
-                    <h3 className="font-semibold text-foreground">Upload & Test</h3>
+                <Card className="p-6 border-2 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 rounded-lg bg-ai/10">
+                      <Upload className="w-5 h-5 text-ai" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-lg">Upload & Test</h3>
                   </div>
                   
                   <div className="space-y-4">
@@ -475,13 +488,15 @@ export default function ColorMismatch() {
                 </Card>
               </div>
 
-              {/* Main Results Area */}
+              {/* Enhanced Main Results Area */}
               <div className="lg:col-span-2 space-y-4">
-                {/* Detection Results */}
+                {/* Enhanced Detection Results */}
                 {detectionResult && (
-                  <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Palette className="w-5 h-5 text-ai" />
+                  <Card className="p-6 lg:p-8 border-2 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 rounded-lg bg-ai/10">
+                        <Palette className="w-5 h-5 text-ai" />
+                      </div>
                       <h3 className="text-lg font-semibold text-foreground">Detection Results</h3>
                     </div>
                     <div className="space-y-4">
@@ -521,11 +536,13 @@ export default function ColorMismatch() {
                   </Card>
                 )}
 
-                {/* Match Results */}
+                {/* Enhanced Match Results */}
                 {matchResult && (
-                  <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CheckCircle className="w-5 h-5 text-ai" />
+                  <Card className="p-6 lg:p-8 border-2 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 rounded-lg bg-ai/10">
+                        <CheckCircle className="w-5 h-5 text-ai" />
+                      </div>
                       <h3 className="text-lg font-semibold text-foreground">Match Analysis</h3>
                     </div>
                     <div className="space-y-4">
@@ -576,14 +593,14 @@ export default function ColorMismatch() {
                 )}
 
                 {!detectionResult && !matchResult && (
-                  <Card className="p-12 border-border/50 bg-card/50 backdrop-blur-sm">
-                    <div className="text-center space-y-4">
-                      <div className="w-16 h-16 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
-                        <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                  <Card className="p-12 lg:p-16 border-2 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg">
+                    <div className="text-center space-y-6">
+                      <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 flex items-center justify-center">
+                        <ImageIcon className="w-10 h-10 text-primary/60" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2">Ready to Test</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="text-xl font-semibold text-foreground mb-3">Ready to Test</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
                           Upload an image and click "Detect" or "Match" to see results
                         </p>
                       </div>
@@ -607,27 +624,108 @@ export default function ColorMismatch() {
                     Explore products, detected colors, and verdicts from the offline pipeline
                   </p>
                 </div>
-                <Badge variant="outline" className="px-3 py-1">
-                  {filteredDataset.rows.length} products
-                </Badge>
+                <div className="flex items-center gap-3">
+                  {dataset && (
+                    <Badge variant="outline" className="px-3 py-1">
+                      {filteredDataset.rows.length} products
+                    </Badge>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchDataset()}
+                    disabled={isDatasetLoading}
+                    className="gap-2"
+                  >
+                    {isDatasetLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        Load Dataset
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
+              {!dataset && !isDatasetLoading && !isDatasetError && (
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 flex items-center justify-center">
+                    <FileText className="w-10 h-10 text-primary/60" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold text-foreground">No Dataset Loaded</h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                      Click "Load Dataset" to fetch the processed CSV from the Color Mismatch backend.
+                    </p>
+                    <Button
+                      variant="default"
+                      size="lg"
+                      onClick={() => refetchDataset()}
+                      disabled={isDatasetLoading}
+                      className="mt-4 gap-2"
+                    >
+                      <FileText className="w-5 h-5" />
+                      Load Dataset from Backend
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {isDatasetLoading && (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mr-2" />
-                  <span className="text-muted-foreground">Loading dataset...</span>
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                  <div className="text-center space-y-1">
+                    <p className="text-foreground font-medium">Loading dataset from backend...</p>
+                    <p className="text-sm text-muted-foreground">Fetching processed CSV data</p>
+                  </div>
                 </div>
               )}
 
               {isDatasetError && (
-                <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-                  <div className="flex items-center gap-2 text-destructive mb-2">
-                    <AlertCircle className="w-5 h-5" />
-                    <span className="font-medium">Could not load dataset</span>
+                <div className="p-6 bg-destructive/10 rounded-lg border-2 border-destructive/20 space-y-4">
+                  <div className="flex items-center gap-3 text-destructive">
+                    <div className="p-2 rounded-lg bg-destructive/20">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <span className="font-semibold text-lg">Could not load dataset</span>
                   </div>
-                  <div className="text-sm text-destructive/80">
-                    {datasetError?.message ?? "Unknown error"}
+                  <div className="text-sm text-destructive/80 space-y-2">
+                    <p>{datasetError?.message ?? "Unknown error"}</p>
                   </div>
+                  <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border/50">
+                    <p className="text-sm font-medium text-foreground mb-3">To start the backend:</p>
+                    <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
+                      <li>Navigate to the <code className="bg-muted px-1.5 py-0.5 rounded">Product_Color_Mismatch_Detection-main</code> directory</li>
+                      <li>Install dependencies: <code className="bg-muted px-1.5 py-0.5 rounded">pip install -r requirements.txt</code></li>
+                      <li>Set your <code className="bg-muted px-1.5 py-0.5 rounded">OPENAI_API_KEY</code> in a <code className="bg-muted px-1.5 py-0.5 rounded">.env</code> file (optional, for GPT features)</li>
+                      <li>Run the server: <code className="bg-muted px-1.5 py-0.5 rounded">python fastapi_app.py</code> or <code className="bg-muted px-1.5 py-0.5 rounded">uvicorn fastapi_app:app --reload --port 8020</code></li>
+                      <li>Ensure the server is running on <code className="bg-muted px-1.5 py-0.5 rounded">http://127.0.0.1:8020</code></li>
+                    </ol>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchDataset()}
+                    disabled={isDatasetLoading}
+                    className="mt-4 gap-2"
+                  >
+                    {isDatasetLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" />
+                        Retry Loading Dataset
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
 

@@ -14,7 +14,8 @@ import {
   ChevronDown,
   X,
   Loader2,
-  LucideIcon
+  LucideIcon,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -367,89 +368,102 @@ export default function ImageToText() {
   };
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="space-y-2">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4 lg:p-8 space-y-8 max-w-[1920px] mx-auto">
+        {/* Enhanced Header */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-ai/10 to-ai/5 border border-ai/20">
+                <FileText className="w-6 h-6 text-ai" />
+              </div>
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
+                  Image-to-Text Auto Generation
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Generate marketplace-ready product descriptions from images with multi-language support
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-gradient-to-r from-ai/10 to-ai/5 text-ai border-ai/20 px-3 py-1.5">
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                AI Powered
+              </Badge>
+              {kpisData && (
+                <Badge className="bg-success/10 text-success border-success/20 px-3 py-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                  API Connected
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+      {/* Enhanced KPI Row */}
+      <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Image-to-Text Auto Generation
-          </h1>
-          <Badge className="bg-ai/10 text-ai border-ai/20">
-            <Sparkles className="w-3 h-3 mr-1" />
-            AI Powered
-          </Badge>
-          {kpisData ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-              API
-            </Badge>
-          ) : kpisLoading ? null : (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
-              Demo
-            </Badge>
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">Performance Metrics</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {kpisLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse border border-border/50" />
+            ))
+          ) : (
+            kpis.map((kpi, index) => {
+              const Icon = iconMap[kpi.icon] || Languages;
+              return (
+                <div 
+                  key={kpi.label}
+                  className={cn(
+                    "rounded-xl p-5 border-2 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
+                    "bg-gradient-to-br from-card/50 to-card/30 border-border/50 backdrop-blur-sm",
+                    "animate-fade-in"
+                  )}
+                  style={{ 
+                    animationDelay: `${index * 50}ms`, 
+                    animationFillMode: 'forwards',
+                    animationDuration: '400ms'
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground">{kpi.label}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-foreground">{kpi.value}</span>
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "text-xs font-semibold",
+                        kpi.change > 0 ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
+                      )}
+                    >
+                      {kpi.change > 0 ? '+' : ''}{kpi.change}%
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
-        <p className="text-muted-foreground">
-          Generate marketplace-ready product descriptions from images with multi-language support
-        </p>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {kpisLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-center h-20">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
+      {/* Enhanced Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Enhanced AI Description Builder */}
+        <div className="rounded-xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-ai/10">
+              <FileText className="w-5 h-5 text-ai" />
             </div>
-          ))
-        ) : (
-          kpis.map((kpi, index) => {
-            const Icon = iconMap[kpi.icon] || Languages;
-          return (
-            <div 
-              key={kpi.label}
-              className="glass-card rounded-xl p-4 opacity-0 animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Icon className="w-4 h-4 text-primary" />
-                <span className="text-xs text-muted-foreground">{kpi.label}</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-foreground">{kpi.value}</span>
-                <div className="flex items-center gap-1">
-                  <Badge 
-                    variant="secondary" 
-                    className={cn(
-                      "text-xs",
-                      kpi.change > 0 ? "text-success" : "text-destructive"
-                    )}
-                  >
-                    {kpi.change > 0 ? '+' : ''}{kpi.change}%
-                  </Badge>
-                  {kpisData ? (
-                    <Badge variant="default" className="text-[8px] px-1 py-0 bg-success/20 text-success border-success/30">
-                      API
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[8px] px-1 py-0 text-muted-foreground border-muted">
-                      Demo
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-          })
-        )}
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* AI Description Builder */}
-        <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-          <h3 className="text-lg font-semibold text-foreground mb-4">AI Description Builder</h3>
+            <h3 className="text-lg font-semibold text-foreground">AI Description Builder</h3>
+          </div>
           
           <input
             ref={fileInputRef}
@@ -459,9 +473,9 @@ export default function ImageToText() {
             className="hidden"
           />
 
-          {/* Image Upload */}
+          {/* Enhanced Image Upload */}
           <div 
-            className="aspect-video bg-gradient-to-br from-sand-50 to-sand-100 rounded-xl mb-4 flex items-center justify-center border-2 border-dashed border-border relative overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+            className="aspect-video bg-gradient-to-br from-sand-50 to-sand-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-border/50 relative overflow-hidden cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={!uploadedImage ? handleBrowse : undefined}
@@ -616,11 +630,16 @@ export default function ImageToText() {
           </div>
         </div>
 
-        {/* Attribute Confidence Matrix */}
+        {/* Enhanced Attribute Confidence Matrix */}
         <div className="space-y-6">
-          <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Attribute Confidence Matrix</h3>
+          <div className="rounded-xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Target className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Attribute Confidence Matrix</h3>
+              </div>
               <Select value={region} onValueChange={setRegion}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Region" />
@@ -673,17 +692,19 @@ export default function ImageToText() {
             </div>
           </div>
 
-            {/* Localization QA */}
+            {/* Enhanced Localization QA */}
             <div
-              className="glass-card rounded-xl p-6 opacity-0 animate-fade-in"
-              style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}
+              className="rounded-xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in"
+              style={{ animationDelay: '400ms', animationFillMode: 'forwards', animationDuration: '500ms' }}
             >
-              {/* UI container */}
-
-              <h3 className="text-lg font-semibold text-foreground mb-4">
-                Localization Quality Check
-              </h3>
-              {/* Heading  */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-info/10">
+                  <Languages className="w-5 h-5 text-info" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Localization Quality Check
+                </h3>
+              </div>
 
               <div className="space-y-4 max-h-[400px] overflow-y-auto">
                 {/* Scroll container */}
@@ -692,7 +713,6 @@ export default function ImageToText() {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   </div>
-                  //Loading state 
                 ) : languages.length > 0 ? (
                   languages.map((lang) => {
                     // get backend QA data for this language
@@ -782,19 +802,20 @@ export default function ImageToText() {
                   </div>
                 )}
               </div>
-            <div className="flex gap-2 mt-4">
-              <Button 
-                className="flex-1" 
-                onClick={handleApproveAll}
-                disabled={approveMutation.isPending || !uploadedImageId}
-              >
-                {approveMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  "Approve All"
-                )}
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={handleEditSelected}>Edit Selected</Button>
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  className="flex-1" 
+                  onClick={handleApproveAll}
+                  disabled={approveMutation.isPending || !uploadedImageId}
+                >
+                  {approveMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Approve All"
+                  )}
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={handleEditSelected}>Edit Selected</Button>
+              </div>
             </div>
           </div>
         </div>

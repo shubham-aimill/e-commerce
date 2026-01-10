@@ -13,7 +13,14 @@ import {
   Sparkles,
   X,
   Loader2,
-  LucideIcon
+  LucideIcon,
+  BarChart3,
+  Info,
+  AlertCircle,
+  Activity,
+  Zap,
+  User,
+  Shirt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +28,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
-import { VirtualTryOnForm } from "@/components/vto/VirtualTryOnForm";
+import { generateTryOn, checkHealth, type GenerateTryOnParams, type VtoHealthResponse } from "@/lib/vto-api";
+import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface PhotoshootKPI {
   label: string;
@@ -139,6 +151,19 @@ export default function AIPhotoshoot() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Virtual Try-On states
+  const vtoFileInputRef = useRef<HTMLInputElement>(null);
+  const [vtoGender, setVtoGender] = useState<"male" | "female">("male");
+  const [vtoCategory, setVtoCategory] = useState<"tshirts" | "pants" | "jackets" | "shoes">("tshirts");
+  const [vtoCurrentBrand, setVtoCurrentBrand] = useState<"Nike" | "Adidas" | "Zara">("Nike");
+  const [vtoCurrentSize, setVtoCurrentSize] = useState("M");
+  const [vtoTargetBrand, setVtoTargetBrand] = useState<"Nike" | "Adidas" | "Zara">("Adidas");
+  const [vtoUploadedImage, setVtoUploadedImage] = useState<File | null>(null);
+  const [vtoImagePreview, setVtoImagePreview] = useState<string | null>(null);
+  const [vtoMappedSize, setVtoMappedSize] = useState<string | null>(null);
+  const [vtoGeneratedImageUrl, setVtoGeneratedImageUrl] = useState<string | null>(null);
+  const [vtoIsDragging, setVtoIsDragging] = useState(false);
+
   // Fetch KPIs
   const { data: kpisData, isLoading: kpisLoading } = useQuery<{ kpis: PhotoshootKPI[] }>({
     queryKey: ["photoshoot", "kpis"],
@@ -250,6 +275,57 @@ export default function AIPhotoshoot() {
       toast({
         title: "Regeneration failed",
         description: "Failed to regenerate photoshoot",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Virtual Try-On health check
+  const { data: vtoHealthData, refetch: checkVtoHealthStatus, isFetching: isVtoHealthChecking, error: vtoHealthError } = useQuery<VtoHealthResponse>({
+    queryKey: ["vto-health"],
+    queryFn: checkHealth,
+    enabled: false,
+    retry: false,
+  });
+
+  // Handle VTO health check
+  useEffect(() => {
+    if (vtoHealthData) {
+      toast({
+        title: "Backend Online",
+        description: `Gemini: ${vtoHealthData.gemini_enabled ? "Enabled" : "Disabled"}`,
+      });
+    }
+  }, [vtoHealthData]);
+
+  useEffect(() => {
+    if (vtoHealthError) {
+      toast({
+        title: "Backend Offline",
+        description: vtoHealthError instanceof Error ? vtoHealthError.message : "Connection failed",
+        variant: "destructive",
+      });
+    }
+  }, [vtoHealthError]);
+
+  // Virtual Try-On generate mutation
+  const vtoGenerateMutation = useMutation({
+    mutationFn: (params: GenerateTryOnParams) => generateTryOn(params),
+    onSuccess: (data) => {
+      const url = URL.createObjectURL(data.image);
+      setVtoGeneratedImageUrl(url);
+      if (data.mappedSize) {
+        setVtoMappedSize(data.mappedSize);
+      }
+      toast({
+        title: "Try-On Generated!",
+        description: "Virtual try-on image generated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -436,104 +512,239 @@ export default function AIPhotoshoot() {
     setSelectedMarketplace(newSet);
   };
 
-  return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            AI Image Generation
-          </h1>
-          <Badge className="bg-ai/10 text-ai border-ai/20">
-            <Sparkles className="w-3 h-3 mr-1" />
-            AI Powered
-          </Badge>
-          {kpisData ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-              API
-            </Badge>
-          ) : kpisLoading ? null : (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
-              Demo
-            </Badge>
-          )}
-        </div>
-        <p className="text-muted-foreground">
-          Generate professional product imagery and virtual try-ons with AI
-        </p>
-      </div>
+  // Virtual Try-On handlers
+  const handleVtoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processVtoFile(file);
+    }
+  };
 
-      {/* Main Tabs */}
-      <Tabs defaultValue="photoshoot" className="space-y-6">
-        <TabsList className="w-full grid grid-cols-2 max-w-md">
-          <TabsTrigger value="photoshoot">AI Photoshoot</TabsTrigger>
-          <TabsTrigger value="tryon">Virtual Try-On</TabsTrigger>
+  const processVtoFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (JPEG, PNG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVtoUploadedImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setVtoImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleVtoDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setVtoIsDragging(true);
+  };
+
+  const handleVtoDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setVtoIsDragging(false);
+  };
+
+  const handleVtoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setVtoIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processVtoFile(file);
+    }
+  };
+
+  const handleVtoRemoveImage = () => {
+    setVtoUploadedImage(null);
+    setVtoImagePreview(null);
+    if (vtoFileInputRef.current) {
+      vtoFileInputRef.current.value = "";
+    }
+  };
+
+  const handleVtoGenerate = () => {
+    if (!vtoCurrentSize.trim()) {
+      toast({
+        title: "Size required",
+        description: "Please enter a size",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    vtoGenerateMutation.mutate({
+      gender: vtoGender,
+      category: vtoCategory,
+      current_brand: vtoCurrentBrand,
+      current_size: vtoCurrentSize,
+      target_brand: vtoTargetBrand,
+      user_image: vtoUploadedImage ?? undefined,
+    });
+  };
+
+  const handleVtoHealthCheck = async () => {
+    try {
+      await checkVtoHealthStatus();
+    } catch (error) {
+      // Error handled by query
+    }
+  };
+
+  const handleVtoDownload = () => {
+    if (!vtoGeneratedImageUrl) return;
+    const link = document.createElement("a");
+    link.href = vtoGeneratedImageUrl;
+    link.download = `tryon-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Downloaded",
+      description: "Image saved successfully",
+    });
+  };
+
+  const handleVtoRegenerate = () => {
+    handleVtoGenerate();
+  };
+
+  // Cleanup VTO object URL
+  useEffect(() => {
+    return () => {
+      if (vtoGeneratedImageUrl) {
+        URL.revokeObjectURL(vtoGeneratedImageUrl);
+      }
+    };
+  }, [vtoGeneratedImageUrl]);
+
+  const vtoIsReady = vtoCurrentSize.trim() && !vtoGenerateMutation.isPending;
+  const vtoHasResult = !!vtoGeneratedImageUrl && !vtoGenerateMutation.isPending;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4 lg:p-8 space-y-8 max-w-[1920px] mx-auto">
+        {/* Enhanced Header */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-ai/10 to-ai/5 border border-ai/20">
+                <Camera className="w-6 h-6 text-ai" />
+              </div>
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
+                  AI Image Generation
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Generate professional product imagery and virtual try-ons with AI
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-gradient-to-w from-ai/10 to-ai/5 text-ai border-ai/20 px-3 py-1.5">
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                AI Powered
+              </Badge>
+              {kpisData && (
+                <Badge className="bg-success/10 text-success border-success/20 px-3 py-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                  API Connected
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+      {/* Enhanced Main Tabs */}
+      <Tabs defaultValue="photoshoot" className="space-y-8">
+        <TabsList className="w-full grid grid-cols-2 max-w-md h-12 bg-muted/50 border border-border/50">
+          <TabsTrigger value="photoshoot" className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">AI Photoshoot</TabsTrigger>
+          <TabsTrigger value="tryon" className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">Virtual Try-On</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="photoshoot" className="space-y-6 mt-0">
-          {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {kpisLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-center h-20">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
+        <TabsContent value="photoshoot" className="space-y-8 mt-0">
+          {/* Enhanced KPI Row */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Performance Metrics</h2>
             </div>
-          ))
-        ) : (
-          kpis.map((kpi, index) => {
-            const Icon = iconMap[kpi.icon] || Camera;
-          return (
-            <div 
-              key={kpi.label}
-              className="glass-card rounded-xl p-4 opacity-0 animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Icon className="w-4 h-4 text-primary" />
-                <span className="text-xs text-muted-foreground">{kpi.label}</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-foreground">{kpi.value}</span>
-                <div className="flex items-center gap-1">
-                  <Badge 
-                    variant="secondary" 
-                    className={cn(
-                      "text-xs",
-                      kpi.change > 0 ? "text-success" : "text-destructive"
-                    )}
-                  >
-                    {kpi.change > 0 ? '+' : ''}{kpi.change}%
-                  </Badge>
-                  {kpisData ? (
-                    <Badge variant="default" className="text-[8px] px-1 py-0 bg-success/20 text-success border-success/30">
-                      API
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[8px] px-1 py-0 text-muted-foreground border-muted">
-                      Demo
-                    </Badge>
-                  )}
-                </div>
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {kpisLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse border border-border/50" />
+                ))
+              ) : (
+                kpis.map((kpi, index) => {
+                  const Icon = iconMap[kpi.icon] || Camera;
+                  return (
+                    <div 
+                      key={kpi.label}
+                      className={cn(
+                        "rounded-xl p-5 border-2 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
+                        "bg-gradient-to-br from-card/50 to-card/30 border-border/50 backdrop-blur-sm",
+                        "animate-fade-in"
+                      )}
+                      style={{ 
+                        animationDelay: `${index * 50}ms`, 
+                        animationFillMode: 'forwards',
+                        animationDuration: '400ms'
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground">{kpi.label}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold text-foreground">{kpi.value}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Badge 
+                            variant="secondary" 
+                            className={cn(
+                              "text-xs font-semibold",
+                              kpi.change > 0 ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
+                            )}
+                          >
+                            {kpi.change > 0 ? '+' : ''}{kpi.change}%
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          );
-          })
-        )}
-      </div>
+          </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Template Selector */}
-        <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-          <h3 className="text-lg font-semibold text-foreground mb-4">Model Style Selection</h3>
+      {/* Enhanced Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Enhanced Template Selector */}
+        <div className="rounded-xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">Model Style Selection</h3>
+          </div>
           
           <Tabs value={activeRegion} onValueChange={setActiveRegion}>
-            <TabsList className="w-full grid grid-cols-3 mb-4">
-              <TabsTrigger value="indian">🇮🇳 Indian</TabsTrigger>
-              <TabsTrigger value="southAfrican">🇿🇦 South African</TabsTrigger>
-              <TabsTrigger value="global">🌍 Global</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-3 mb-6 h-11 bg-muted/50 border border-border/50">
+              <TabsTrigger value="indian" className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">🇮🇳 Indian</TabsTrigger>
+              <TabsTrigger value="southAfrican" className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">🇿🇦 South African</TabsTrigger>
+              <TabsTrigger value="global" className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">🌍 Global</TabsTrigger>
             </TabsList>
 
             {templatesLoading ? (
@@ -549,20 +760,20 @@ export default function AIPhotoshoot() {
                       key={template.id}
                       onClick={() => setSelectedTemplate(template.id)}
                       className={cn(
-                        "p-4 rounded-xl border-2 cursor-pointer transition-all",
-                        "hover:border-primary/50 hover:bg-muted/50",
+                        "p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 group",
+                        "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
                         selectedTemplate === template.id 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border/50"
+                          ? "border-primary bg-primary/10 shadow-md scale-[1.02]" 
+                          : "border-border/50 hover:scale-[1.01]"
                       )}
                     >
-                      <div className="aspect-square bg-gradient-to-br from-sand-100 to-sand-200 rounded-lg mb-3 flex items-center justify-center">
+                      <div className="aspect-square bg-gradient-to-br from-sand-100 to-sand-200 rounded-lg mb-3 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
                         <Camera className="w-8 h-8 text-sand-400" />
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-foreground text-sm">{template.name}</h4>
+                      <div className="space-y-1.5">
+                        <h4 className="font-semibold text-foreground text-sm">{template.name}</h4>
                         <p className="text-xs text-muted-foreground">{template.image}</p>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs font-medium">
                           {template.uses.toLocaleString()} uses
                         </Badge>
                       </div>
@@ -599,9 +810,14 @@ export default function AIPhotoshoot() {
           </div>
         </div>
 
-        {/* Before/After Viewer */}
-        <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}>
-          <h3 className="text-lg font-semibold text-foreground mb-4">Image Preview</h3>
+        {/* Enhanced Before/After Viewer */}
+        <div className="rounded-xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Camera className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">Image Preview</h3>
+          </div>
           
           <input
             ref={fileInputRef}
@@ -612,7 +828,7 @@ export default function AIPhotoshoot() {
           />
 
           <div 
-            className="aspect-[4/3] bg-gradient-to-br from-sand-50 to-sand-100 rounded-xl mb-4 flex items-center justify-center border-2 border-dashed border-border relative overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+            className="aspect-[4/3] bg-gradient-to-br from-sand-50 to-sand-100 rounded-xl mb-4 flex items-center justify-center border-2 border-dashed border-border/50 relative overflow-hidden cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={!uploadedImage ? handleBrowseFiles : undefined}
@@ -759,9 +975,14 @@ export default function AIPhotoshoot() {
         </div>
       </div>
 
-      {/* Cost Efficiency Panel */}
-      <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
-        <h3 className="text-lg font-semibold text-foreground mb-4">Cost & Efficiency Analysis</h3>
+      {/* Enhanced Cost Efficiency Panel */}
+      <div className="rounded-xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-success/10">
+            <DollarSign className="w-5 h-5 text-success" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">Cost & Efficiency Analysis</h3>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-4 bg-success/5 rounded-xl">
@@ -845,9 +1066,435 @@ export default function AIPhotoshoot() {
         </TabsContent>
 
         <TabsContent value="tryon" className="space-y-6 mt-0">
-          <VirtualTryOnForm />
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
+            {/* Left Sidebar - Configuration (4 columns) */}
+            <div className="xl:col-span-4 space-y-6">
+              {/* Step 1: Identity Card */}
+              <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
+                    <span className="text-base font-bold text-primary-foreground">1</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Identity Setup</h3>
+                    <p className="text-xs text-muted-foreground">Configure your profile</p>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2.5 block">
+                      Gender
+                    </label>
+                    <Select value={vtoGender} onValueChange={(v) => setVtoGender(v as "male" | "female")}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2.5 block">
+                      Profile Image
+                    </label>
+                    <input
+                      ref={vtoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleVtoFileChange}
+                      className="hidden"
+                    />
+                    {vtoImagePreview ? (
+                      <div className="relative group">
+                        <div className="aspect-[3/4] rounded-xl overflow-hidden border-2 border-border shadow-md">
+                          <img
+                            src={vtoImagePreview}
+                            alt="Preview"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-3 right-3 h-9 w-9 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          onClick={handleVtoRemoveImage}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          "aspect-[3/4] border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300",
+                          vtoIsDragging
+                            ? "border-primary bg-primary/5 scale-[1.02]"
+                            : "border-border/50 bg-muted/30 hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                        onDragOver={handleVtoDragOver}
+                        onDragLeave={handleVtoDragLeave}
+                        onDrop={handleVtoDrop}
+                        onClick={() => vtoFileInputRef.current?.click()}
+                      >
+                        <div className="p-4 rounded-full bg-primary/10 mb-3">
+                          <Upload className="w-6 h-6 text-primary" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground mb-1">Click or drag to upload</p>
+                        <p className="text-xs text-muted-foreground text-center px-4">
+                          PNG, JPG up to 10MB
+                        </p>
+                      </div>
+                    )}
+                    {!vtoUploadedImage && (
+                      <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg mt-3 border border-border/50">
+                        <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Optional: Upload your photo or use default model image
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Step 2: Product Selection Card */}
+              <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
+                    <span className="text-base font-bold text-primary-foreground">2</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Product Selection</h3>
+                    <p className="text-xs text-muted-foreground">Choose your product details</p>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2.5 block">
+                        Category
+                      </label>
+                      <Select value={vtoCategory} onValueChange={(v) => setVtoCategory(v as typeof vtoCategory)}>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tshirts">T-Shirts</SelectItem>
+                          <SelectItem value="pants">Pants</SelectItem>
+                          <SelectItem value="jackets">Jackets</SelectItem>
+                          <SelectItem value="shoes">Shoes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2.5 block">
+                        Gender
+                      </label>
+                      <Select value={vtoGender} onValueChange={(v) => setVtoGender(v as "male" | "female")}>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2.5 block flex items-center gap-2">
+                      <Shirt className="w-4 h-4" />
+                      Current Brand
+                    </label>
+                    <Select value={vtoCurrentBrand} onValueChange={(v) => setVtoCurrentBrand(v as typeof vtoCurrentBrand)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Nike">Nike</SelectItem>
+                        <SelectItem value="Adidas">Adidas</SelectItem>
+                        <SelectItem value="Zara">Zara</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2.5 block">
+                      Current Size
+                    </label>
+                    <Input
+                      placeholder="e.g., M, 44, 8"
+                      value={vtoCurrentSize}
+                      onChange={(e) => setVtoCurrentSize(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2.5 block flex items-center gap-2">
+                      <ArrowRight className="w-4 h-4" />
+                      Target Brand
+                    </label>
+                    <Select value={vtoTargetBrand} onValueChange={(v) => setVtoTargetBrand(v as typeof vtoTargetBrand)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Nike">Nike</SelectItem>
+                        <SelectItem value="Adidas">Adidas</SelectItem>
+                        <SelectItem value="Zara">Zara</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Mapped Size Display */}
+                  {vtoMappedSize && (
+                    <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Target Mapped Size
+                          </div>
+                          <div className="text-2xl font-bold text-primary">{vtoMappedSize}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <CheckCircle className="w-5 h-5 text-primary" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Health Check Card */}
+              <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
+                <Button
+                  variant="outline"
+                  className="w-full h-11"
+                  onClick={handleVtoHealthCheck}
+                  disabled={isVtoHealthChecking}
+                >
+                  {isVtoHealthChecking ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="w-4 h-4 mr-2" />
+                      Check Backend Health
+                    </>
+                  )}
+                </Button>
+                {vtoHealthData && (
+                  <div className="mt-3 p-3 bg-success/10 rounded-lg border border-success/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle className="w-4 h-4 text-success" />
+                      <div className="font-medium text-success text-sm">Status: {vtoHealthData.status}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Gemini: {vtoHealthData.gemini_enabled ? "Enabled" : "Disabled"}
+                    </div>
+                  </div>
+                )}
+                {vtoHealthError && (
+                  <div className="mt-3 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertCircle className="w-4 h-4 text-destructive" />
+                      <div className="font-medium text-destructive text-sm">Backend Offline</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {vtoHealthError instanceof Error ? vtoHealthError.message : "Connection failed"}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* Main Content Area - Preview & Results (8 columns) */}
+            <div className="xl:col-span-8">
+              <Card className="p-8 lg:p-10 border-border/50 bg-card/50 backdrop-blur-sm shadow-lg min-h-[600px] flex flex-col">
+                {/* Header Section */}
+                <div className="text-center space-y-3 mb-8">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                    <Zap className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">AI Generation</span>
+                  </div>
+                  <h2 className="text-2xl lg:text-3xl font-bold text-foreground">
+                    Virtual Try-On Preview
+                  </h2>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    Generate a photorealistic virtual try-on using advanced AI technology
+                  </p>
+                </div>
+
+                {/* Generate Button */}
+                <div className="flex justify-center mb-8">
+                  <Button
+                    size="lg"
+                    onClick={handleVtoGenerate}
+                    disabled={!vtoIsReady}
+                    className={cn(
+                      "min-w-[280px] h-14 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300",
+                      vtoIsReady && "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                    )}
+                  >
+                    {vtoGenerateMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 mr-2" />
+                        Generate Virtual Try-On
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Loading State */}
+                {vtoGenerateMutation.isPending && (
+                  <div className="flex-1 flex flex-col items-center justify-center space-y-6 py-12">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                      </div>
+                      <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    </div>
+                    <div className="text-center space-y-2 max-w-sm">
+                      <p className="text-lg font-semibold text-foreground">Processing Your Request</p>
+                      <p className="text-sm text-muted-foreground">
+                        Our AI is creating your virtual try-on. This may take 10-30 seconds.
+                      </p>
+                      <div className="pt-4 w-full max-w-xs mx-auto">
+                        <Progress value={undefined} className="h-2" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generated Image Display */}
+                {vtoHasResult && (
+                  <div className="flex-1 space-y-6 animate-fade-in">
+                    <div className="flex items-center justify-center gap-2 p-3 bg-success/10 rounded-lg border border-success/20">
+                      <CheckCircle className="w-5 h-5 text-success" />
+                      <span className="font-semibold text-success">Try-On Generated Successfully!</span>
+                    </div>
+                    <div className="relative group rounded-2xl overflow-hidden border-2 border-border bg-muted/20 shadow-2xl">
+                      <img
+                        src={vtoGeneratedImageUrl}
+                        alt="Generated Try-On"
+                        className="w-full h-auto transition-transform duration-500 group-hover:scale-[1.02]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border/50">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-foreground">Final Result from Gemini 3</p>
+                        {vtoMappedSize && (
+                          <p className="text-xs text-muted-foreground">
+                            Mapped size: <span className="font-semibold text-primary">{vtoMappedSize}</span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleVtoDownload}
+                          className="gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleVtoRegenerate}
+                          className="gap-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Regenerate
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!vtoHasResult && !vtoGenerateMutation.isPending && (
+                  <div className="flex-1 flex flex-col items-center justify-center space-y-6 py-16">
+                    <div className="relative">
+                      <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border-2 border-primary/20">
+                        <Camera className="w-16 h-16 text-primary/60" />
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                      </div>
+                    </div>
+                    <div className="text-center space-y-2 max-w-md">
+                      <p className="text-xl font-semibold text-foreground">Ready to Generate</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Configure your settings on the left and click generate to create your virtual try-on experience
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {vtoGenerateMutation.isError && (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="w-full max-w-md p-6 bg-destructive/10 border-2 border-destructive/20 rounded-xl space-y-4">
+                      <div className="flex items-center gap-3 text-destructive">
+                        <div className="p-2 rounded-lg bg-destructive/20">
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground">Generation Failed</div>
+                          <div className="text-sm text-destructive/80">
+                            {vtoGenerateMutation.error instanceof Error
+                              ? vtoGenerateMutation.error.message
+                              : "Unknown error occurred"}
+                          </div>
+                        </div>
+                      </div>
+                      {vtoGenerateMutation.error instanceof Error &&
+                       vtoGenerateMutation.error.message.includes("Could not connect") && (
+                        <div className="p-4 bg-muted/50 rounded-lg border border-border space-y-2">
+                          <p className="text-sm font-medium text-foreground">Backend Setup Required:</p>
+                          <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                            <li>Navigate to the VTryon_Updated directory</li>
+                            <li>Install dependencies: <code className="bg-muted px-1 rounded">pip install -r requirements.txt</code></li>
+                            <li>Set your GEMINI_API_KEY in a .env file</li>
+                            <li>Run the server: <code className="bg-muted px-1 rounded">uvicorn app:app --reload</code></li>
+                          </ol>
+                        </div>
+                      )}
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleVtoGenerate}
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

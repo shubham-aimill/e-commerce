@@ -9,7 +9,9 @@ import {
   XCircle,
   ChevronDown,
   Search,
-  Loader2
+  Loader2,
+  BarChart3,
+  Languages,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -330,43 +332,54 @@ export default function MismatchEngine() {
   const filteredData = tableData; // Backend handles filtering when API is available
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Image-Description Mismatch Engine
-          </h1>
-          {mismatchData ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-              API
-            </Badge>
-          ) : mismatchError ? (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
-              Demo
-            </Badge>
-          ) : null}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4 lg:p-8 space-y-8 max-w-[1920px] mx-auto">
+        {/* Enhanced Header */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/20">
+                <AlertTriangle className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
+                  Image-Description Mismatch Engine
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Detect and resolve content quality issues across marketplaces
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {mismatchData ? (
+                <Badge className="bg-success/10 text-success border-success/20 px-3 py-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                  API Connected
+                </Badge>
+              ) : mismatchError ? (
+                <Badge variant="outline" className="border-muted text-muted-foreground px-3 py-1.5">
+                  Demo Mode
+                </Badge>
+              ) : null}
+            </div>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Detect and resolve content quality issues across marketplaces
-        </p>
-      </div>
 
-      {/* Filters Bar */}
-      <div className="glass-card rounded-xl p-4 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
+      {/* Enhanced Filters Bar */}
+      <div className="rounded-xl p-5 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationFillMode: 'forwards', animationDuration: '400ms' }}>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+          <div className="flex items-center gap-2 flex-1 min-w-[250px] bg-background/50 rounded-lg border border-border/50 px-3 py-2 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <Search className="w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Search SKUs..." 
-              className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+              placeholder="Search SKUs, products, issues..." 
+              className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[140px] bg-muted/50">
+            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -380,7 +393,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={brand} onValueChange={setBrand}>
-            <SelectTrigger className="w-[140px] bg-muted/50">
+            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Brand" />
             </SelectTrigger>
             <SelectContent>
@@ -392,7 +405,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={marketplace} onValueChange={setMarketplace}>
-            <SelectTrigger className="w-[140px] bg-muted/50">
+            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Marketplace" />
             </SelectTrigger>
             <SelectContent>
@@ -414,7 +427,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-[140px] bg-muted/50">
+            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Language" />
             </SelectTrigger>
             <SelectContent>
@@ -434,7 +447,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={region} onValueChange={setRegion}>
-            <SelectTrigger className="w-[140px] bg-muted/50">
+            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Country/Region" />
             </SelectTrigger>
             <SelectContent>
@@ -446,7 +459,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={issueType} onValueChange={setIssueType}>
-            <SelectTrigger className="w-[140px] bg-muted/50">
+            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Issue Type" />
             </SelectTrigger>
             <SelectContent>
@@ -457,376 +470,192 @@ export default function MismatchEngine() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleMoreFilters}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 h-10 hover:bg-muted/50 transition-colors" 
+            onClick={handleMoreFilters}
+          >
             <Filter className="w-4 h-4" />
             More Filters
           </Button>
 
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleClearFilters}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground h-10 hover:text-foreground hover:bg-muted/50 transition-colors" 
+            onClick={handleClearFilters}
+          >
             Clear all
           </Button>
         </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {kpisLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-center h-20">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
-            </div>
-          ))
-        ) : (
-          kpis.map((kpi, index) => (
-            <div 
-              key={kpi.label}
-              className="glass-card rounded-xl p-4 opacity-0 animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">{kpi.label}</span>
-                <div className="flex items-center gap-1">
-                  <Badge 
-                    variant="secondary" 
-                    className={cn(
-                      "text-xs",
-                      kpi.change < 0 ? "text-success" : "text-warning"
+      {/* Enhanced KPI Row */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">Performance Metrics</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {kpisLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse border border-border/50" />
+            ))
+          ) : (
+            kpis.map((kpi, index) => (
+              <div 
+                key={kpi.label}
+                className={cn(
+                  "rounded-xl p-5 border-2 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
+                  "bg-gradient-to-br from-card/50 to-card/30 border-border/50 backdrop-blur-sm",
+                  "animate-fade-in"
+                )}
+                style={{ 
+                  animationDelay: `${index * 50}ms`, 
+                  animationFillMode: 'forwards',
+                  animationDuration: '400ms'
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground">{kpi.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "text-xs font-semibold",
+                        kpi.change < 0 ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20"
+                      )}
+                    >
+                      {kpi.change > 0 ? '+' : ''}{kpi.change}%
+                    </Badge>
+                    {kpisData && (
+                      <Badge className="text-[8px] px-1.5 py-0.5 bg-success/20 text-success border-success/30">
+                        API
+                      </Badge>
                     )}
-                  >
-                    {kpi.change > 0 ? '+' : ''}{kpi.change}%
-                  </Badge>
-                  {kpisData ? (
-                    <Badge variant="default" className="text-[8px] px-1 py-0 bg-success/20 text-success border-success/30">
-                      API
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[8px] px-1 py-0 text-muted-foreground border-muted">
-                      Demo
-                    </Badge>
-                  )}
+                  </div>
                 </div>
+                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
               </div>
-              <div className="text-xl font-bold text-foreground">{kpi.value}</div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Data Table */}
+        {/* Color Mismatch CSV Section */}
         <div className="lg:col-span-2">
-          <div className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-            <div className="p-4 border-b border-border/50 flex items-center justify-between">
+          <div className="rounded-xl overflow-hidden border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+            <div className="p-5 border-b border-border/50 bg-gradient-to-r from-muted/30 to-transparent flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-foreground">Image-Description Audit Table</h3>
-                <p className="text-sm text-muted-foreground">
-                  {mismatchLoading ? "Loading..." : `Showing ${filteredData.length} of ${mismatchData?.pagination.total ?? 0} items with issues`}
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  Color Mismatch CSV (offline pipeline)
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Snapshot of the processed CSV used by the Product Color Mismatch detector.
                 </p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-2" 
-                onClick={handleExport}
-                disabled={exportMutation.isPending}
-              >
-                {exportMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                Export
-              </Button>
+              <Badge variant="outline" className="text-[10px]">
+                CSV
+              </Badge>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-muted/30">
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">SKU</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Marketplace</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Mismatch Score</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Attribute Errors</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Local Missing</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Category</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Issue Type</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Listing %</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Impact</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground p-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mismatchLoading ? (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Loading data...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : mismatchError ? (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertTriangle className="w-8 h-8 text-destructive" />
-                          <p className="text-sm text-destructive">Failed to load data</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : filteredData.length > 0 ? (
-                    filteredData.map((row, index) => (
-                      <tr 
-                        key={row.sku}
-                        className="border-t border-border/30 hover:bg-muted/20 transition-colors"
-                      >
-                      <td className="p-4">
-                        <code className="text-sm font-mono bg-muted px-1.5 py-0.5 rounded">
-                          {row.sku}
-                        </code>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant="outline">{row.marketplace}</Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className={cn(
-                                "h-full rounded-full",
-                                row.mismatchScore >= 70 ? "bg-destructive" :
-                                row.mismatchScore >= 40 ? "bg-warning" : "bg-success"
-                              )}
-                              style={{ width: `${row.mismatchScore}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{row.mismatchScore}%</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-wrap gap-1">
-                          {row.attributeErrors.length > 0 ? (
-                            row.attributeErrors.map(err => (
-                              <Badge key={err} variant="secondary" className="text-xs bg-destructive/10 text-destructive">
-                                {err}
-                              </Badge>
-                            ))
-                          ) : (
-                            <CheckCircle className="w-4 h-4 text-success" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-1">
-                          {row.localMissing.length > 0 ? (
-                            row.localMissing.map(lang => (
-                              <span key={lang} title={lang}>
-                                {flagEmojis[lang]}
-                              </span>
-                            ))
-                          ) : (
-                            <CheckCircle className="w-4 h-4 text-success" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-foreground">{row.category}</td>
-                      <td className="p-4">
-                        <Badge 
-                          variant="secondary"
-                          className={cn(
-                            "text-xs",
-                            row.issueType === "Multiple Issues" && "bg-destructive/10 text-destructive"
-                          )}
-                        >
-                          {row.issueType}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <span className={cn(
-                          "text-sm font-medium",
-                          row.listingProb >= 70 ? "text-success" :
-                          row.listingProb >= 40 ? "text-warning" : "text-destructive"
-                        )}>
-                          {row.listingProb}%
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <span 
-                              key={i}
-                              className={cn(
-                                "text-xs",
-                                i < Math.floor(row.impactScore) ? "text-warning" : "text-muted"
-                              )}
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0" 
-                            onClick={() => handleViewDetails(row.sku)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="default" 
-                            className="h-8 text-xs"
-                            onClick={() => handleFix(row.sku)}
-                            disabled={fixMutation.isPending}
-                          >
-                            {fixMutation.isPending ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              "Fix"
-                            )}
-                          </Button>
-                        </div>
-                      </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertTriangle className="w-8 h-8 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">No items found matching your filters</p>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleClearFilters}
-                            className="mt-2"
-                          >
-                            Clear filters
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {/* Color mismatch CSV snapshot from Product_Color_Mismatch_Detection */}
-            <div className="border-t border-border/40 bg-muted/10">
-              <div className="p-4 flex items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">
-                    Color Mismatch CSV (offline pipeline)
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    Snapshot of the processed CSV used by the Product Color Mismatch detector.
-                  </p>
+            {isColorCsvLoading && (
+              <div className="p-8 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Loading CSV snapshot from backend...</span>
                 </div>
-                <Badge variant="outline" className="text-[10px]">
-                  CSV
-                </Badge>
               </div>
+            )}
 
-              {isColorCsvLoading && (
-                <div className="px-4 pb-4 text-xs text-muted-foreground">
-                  Loading CSV snapshot from backend...
+            {isColorCsvError && (
+              <div className="p-8 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <AlertTriangle className="w-8 h-8 text-destructive" />
+                  <p className="text-sm text-destructive">{colorCsvError?.message ?? "Failed to load CSV data"}</p>
                 </div>
-              )}
+              </div>
+            )}
 
-              {isColorCsvError && (
-                <div className="px-4 pb-4 text-xs text-destructive">
-                  {colorCsvError?.message ?? "Failed to load CSV data"}
-                </div>
-              )}
-
-              {colorCsv && !isColorCsvLoading && !isColorCsvError && (
-                <div className="overflow-x-auto px-4 pb-4">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-muted/40">
-                        <th className="text-left font-medium text-muted-foreground p-2">
-                          Image
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground p-2">
-                          ID
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground p-2">
-                          Product
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground p-2">
-                          Catalog Color
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground p-2">
-                          Detected Color
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground p-2">
-                          Verdict
-                        </th>
+            {colorCsv && !isColorCsvLoading && !isColorCsvError && (
+              <div className="overflow-x-auto p-4">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
+                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Image</th>
+                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">ID</th>
+                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Product</th>
+                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Catalog Color</th>
+                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Detected Color</th>
+                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {colorCsv.rows.slice(0, 20).map((row, idx) => (
+                      <tr
+                        key={(row["id"] as string | number | undefined) ?? idx}
+                        className="border-t border-border/30 hover:bg-muted/30 transition-all duration-200"
+                      >
+                        <td className="p-3">
+                          <ProductImage
+                            productId={String(row["id"] ?? "")}
+                            index={idx}
+                            alt={String(row["productDisplayName"] ?? "Product")}
+                            className="w-16 h-16"
+                            fallbackClassName="w-16 h-16"
+                          />
+                        </td>
+                        <td className="p-3 font-mono text-sm">
+                          {String(row["id"] ?? "-")}
+                        </td>
+                        <td className="p-3 text-sm">
+                          {String(row["productDisplayName"] ?? "")}
+                        </td>
+                        <td className="p-3 text-sm">
+                          {String(
+                            row[colorCsv.color_column ?? "baseColour"] ?? ""
+                          )}
+                        </td>
+                        <td className="p-3 text-sm">
+                          {String(row["detected_color"] ?? "")}
+                        </td>
+                        <td className="p-3">
+                          <Badge
+                            variant={
+                              row["Verdict"] === "Match" ? "outline" : "destructive"
+                            }
+                            className="text-xs"
+                          >
+                            {String(row["Verdict"] ?? "")}
+                          </Badge>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {colorCsv.rows.slice(0, 20).map((row, idx) => (
-                        <tr
-                          key={(row["id"] as string | number | undefined) ?? idx}
-                          className="border-t border-border/20"
-                        >
-                          <td className="p-2">
-                            <ProductImage
-                              productId={row["id"] ?? ""}
-                              index={idx}
-                              alt={String(row["productDisplayName"] ?? "Product")}
-                              className="w-16 h-16"
-                              fallbackClassName="w-16 h-16"
-                            />
-                          </td>
-                          <td className="p-2 font-mono">
-                            {row["id"] ?? "-"}
-                          </td>
-                          <td className="p-2">
-                            {String(row["productDisplayName"] ?? "")}
-                          </td>
-                          <td className="p-2">
-                            {String(
-                              row[colorCsv.color_column ?? "baseColour"] ?? ""
-                            )}
-                          </td>
-                          <td className="p-2">
-                            {String(row["detected_color"] ?? "")}
-                          </td>
-                          <td className="p-2">
-                            <Badge
-                              variant={
-                                row["Verdict"] === "Match" ? "outline" : "destructive"
-                              }
-                              className="text-[10px]"
-                            >
-                              {String(row["Verdict"] ?? "")}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="mt-2 text-[10px] text-muted-foreground">
-                    Showing first 20 rows from{" "}
-                    <code>hf_products_with_verdict.csv</code>.
-                  </p>
-                </div>
-              )}
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="mt-4 text-xs text-muted-foreground text-center">
+                  Showing first 20 rows from{" "}
+                  <code className="bg-muted px-1.5 py-0.5 rounded">hf_products_with_verdict.csv</code>.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Panels */}
+        {/* Enhanced Right Panels */}
         <div className="space-y-6">
           {/* Panel A: Attribute Mismatch Visualizer */}
-          <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}>
-            <h3 className="text-lg font-semibold text-foreground mb-4">Attribute Mismatch Visualizer</h3>
+          <div className="rounded-xl p-6 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Eye className="w-4 h-4 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Attribute Mismatch Visualizer</h3>
+            </div>
             <p className="text-xs text-muted-foreground mb-4">
               {selectedSku ? `Side-by-side comparison for ${selectedSku}` : "Select a SKU to view attribute comparison"}
             </p>
@@ -894,8 +723,13 @@ export default function MismatchEngine() {
           </div>
 
           {/* Panel B: Localization Panel */}
-          <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
-            <h3 className="text-lg font-semibold text-foreground mb-4">Localization Panel</h3>
+          <div className="rounded-xl p-6 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-lg bg-info/10">
+                <Languages className="w-4 h-4 text-info" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Localization Panel</h3>
+            </div>
             <p className="text-xs text-muted-foreground mb-4">
               {selectedSku ? `Localization status for ${selectedSku}` : "Select a SKU to view localization"}
             </p>
@@ -981,6 +815,7 @@ export default function MismatchEngine() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>

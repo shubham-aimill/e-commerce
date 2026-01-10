@@ -9,7 +9,8 @@ import {
   BarChart3,
   Download,
   Copy,
-  Loader2
+  Loader2,
+  CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -147,43 +148,44 @@ export default function SQLAgent() {
   };
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-[1200px] mx-auto">
-      {/* Header */}
-      <div className="space-y-2 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Text-to-SQL Agent
-          </h1>
-          <Badge className="bg-ai/10 text-ai border-ai/20">
-            <Sparkles className="w-3 h-3 mr-1" />
-            AI Powered
-          </Badge>
-          {queryResult ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-success/20 text-success border-success/30">
-              API
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4 lg:p-8 space-y-8 max-w-[1400px] mx-auto">
+        {/* Enhanced Header */}
+        <div className="space-y-3 text-center">
+          <div className="flex items-center justify-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-ai/10 to-ai/5 border border-ai/20">
+              <MessageSquare className="w-6 h-6 text-ai" />
+            </div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
+              Text-to-SQL Agent
+            </h1>
+            <Badge className="bg-gradient-to-r from-ai/10 to-ai/5 text-ai border-ai/20 px-3 py-1.5">
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              AI Powered
             </Badge>
-          ) : queryMutation.isError ? (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted">
-              Demo
-            </Badge>
-          ) : null}
+            {queryResult && (
+              <Badge className="bg-success/10 text-success border-success/20 px-3 py-1.5">
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                API Connected
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+            Ask questions about your content data in natural language. Get instant insights without writing SQL.
+          </p>
         </div>
-        <p className="text-muted-foreground max-w-xl mx-auto">
-          Ask questions about your content data in natural language. Get instant insights without writing SQL.
-        </p>
-      </div>
 
-      {/* Query Input */}
-      <div className="glass-card rounded-2xl p-6 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
+      {/* Enhanced Query Input */}
+      <div className="rounded-2xl p-6 lg:p-8 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationFillMode: 'forwards', animationDuration: '500ms' }}>
         <div className="relative">
-          <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border/50 focus-within:border-primary/50 transition-colors">
+          <div className="flex items-start gap-3 p-5 bg-gradient-to-br from-muted/50 to-muted/30 rounded-xl border-2 border-border/50 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-300">
             <MessageSquare className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ask a question about your content data..."
-              className="flex-1 bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground min-h-[60px]"
-              rows={2}
+              placeholder="Ask a question about your content data... (e.g., 'Show me all mismatches in Fashion category')"
+              className="flex-1 bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground min-h-[80px] text-base"
+              rows={3}
             />
           </div>
           
@@ -194,7 +196,7 @@ export default function SQLAgent() {
             </div>
             <Button 
               onClick={handleSubmit}
-              className="gap-2"
+              className="gap-2 h-11 min-w-[140px] font-semibold shadow-lg hover:shadow-xl transition-all"
               disabled={!query.trim() || queryMutation.isPending}
             >
               {queryMutation.isPending ? (
@@ -230,15 +232,17 @@ export default function SQLAgent() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Results */}
+        {/* Enhanced Results */}
         <div className="lg:col-span-2">
           {hasResult ? (
-            <div className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
-              <div className="p-4 border-b border-border/50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Table className="w-4 h-4 text-primary" />
-                  <span className="font-medium text-foreground">Query Results</span>
-                  <Badge variant="secondary">{queryResult.rowCount} rows</Badge>
+            <div className="rounded-xl overflow-hidden border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+              <div className="p-5 border-b border-border/50 bg-gradient-to-r from-muted/30 to-transparent flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Table className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="font-semibold text-foreground text-lg">Query Results</span>
+                  <Badge variant="secondary" className="font-semibold">{queryResult.rowCount} rows</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button 
@@ -311,23 +315,25 @@ export default function SQLAgent() {
               </div>
             </div>
           ) : (
-            <div className="glass-card rounded-xl p-12 text-center opacity-0 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
-              <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-muted-foreground" />
+            <div className="rounded-xl p-12 lg:p-16 text-center border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 flex items-center justify-center mx-auto mb-6">
+                <MessageSquare className="w-10 h-10 text-primary" />
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">Ask a Question</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              <h3 className="text-xl font-semibold text-foreground mb-3">Ask a Question</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
                 Type a question about your content data in natural language and our AI will generate the insights for you.
               </p>
             </div>
           )}
         </div>
 
-        {/* Recent Queries */}
-        <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium text-foreground">Recent Queries</h3>
+        {/* Enhanced Recent Queries */}
+        <div className="rounded-xl p-6 border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Clock className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="font-semibold text-foreground text-lg">Recent Queries</h3>
           </div>
 
           <div className="space-y-3">
@@ -385,6 +391,7 @@ export default function SQLAgent() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
