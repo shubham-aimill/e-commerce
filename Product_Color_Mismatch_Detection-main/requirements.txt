@@ -12,7 +12,7 @@ tqdm
 Pillow
 
 # CLIP / Transformers
-torch
+torch==2.2.2+cpu
 transformers
 
 # LangChain + OpenAI
