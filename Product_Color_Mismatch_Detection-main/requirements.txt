@@ -1,23 +1,24 @@
 # FastAPI & Server
-fastapi
-uvicorn[standard]
-python-multipart
-python-dotenv
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+python-dotenv==1.0.1
 
 # Core
-pandas
-pyyaml
-requests
-tqdm
-Pillow
+pandas==2.2.3
+pyyaml==6.0.2
+requests==2.32.3
+tqdm==4.67.1
+Pillow==11.0.0
 
-# CLIP / Transformers
-torch==2.6.0+cpu
-transformers
+# CLIP / Transformers - PyTorch CPU-only (lighter memory footprint)
+# Note: For CPU-only builds, install from PyPI (auto-detects CPU)
+torch==2.5.1
+transformers==4.46.3
 
 # LangChain + OpenAI
-langchain
-langchain-core
-langchain-openai
-openai
-datasets
+langchain==0.3.14
+langchain-core==0.3.18
+langchain-openai==0.2.9
+openai==1.57.4
+datasets==3.0.1
