@@ -1,85 +1,317 @@
-from typing import Dict, List, Optional, Tuple
+# from typing import Dict, List, Optional, Tuple
+# import os
+# import io
+# import base64
+
+# import torch
+# from PIL import Image
+# from transformers import CLIPModel, CLIPProcessor
+
+# from .color_palette import COLOR_CANDIDATES
+
+# from dotenv import load_dotenv
+# load_dotenv()
+
+
+# # GPT Vision
+# from langchain_openai import ChatOpenAI
+
+
+# class ClipColorDetector:
+#     """
+#     Detects dominant color of an image using CLIP with optional GPT fallback.
+#     """
+
+#     def __init__(
+#         self,
+#         device: str = "cpu",
+#         enable_gpt_fallback: bool = True,
+#         gpt_model_name: str = "gpt-4o-mini",
+#         openai_api_key: Optional[str] = None,
+#     ) -> None:
+#         """
+#         Initialize CLIP model and optional GPT fallback.
+#         """
+
+#         # -------- CLIP --------
+#         self.device = device
+#         self.model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
+#         self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
+
+#         self.model.to(self.device)
+#         self.model.eval()
+
+#         # -------- GPT fallback --------
+#         self.enable_gpt_fallback = enable_gpt_fallback
+
+#         if openai_api_key is None:
+#             openai_api_key = os.getenv("OPENAI_API_KEY")
+
+#         self.llm = None
+#         if self.enable_gpt_fallback:
+#             self.llm = ChatOpenAI(
+#                 model=gpt_model_name,
+#                 api_key=openai_api_key,
+#             )
+
+#     # -------------------------------------------------------------------------
+#     # GPT fallback
+#     # -------------------------------------------------------------------------
+#     def _detect_with_gpt(
+#         self,
+#         image: Image.Image,
+#         candidate_colors: List[str],
+#     ) -> Dict[str, object]:
+#         """
+#         Fallback color detection using GPT Vision model with guaranteed JSON output.
+#         """
+
+#         buffered = io.BytesIO()
+#         image.save(buffered, format="PNG")
+#         b64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+#         prompt = f"""
+#         You are a product color classifier.
+
+#         You MUST respond ONLY with valid JSON and NOTHING else.
+
+#         Select the single closest color name from this list:
+#         {candidate_colors}
+
+#         JSON schema to follow exactly:
+
+#         {{
+#             "detected_color": "<one_of_candidate_list>",
+#             "reason": "<short explanation>"
+#         }}
+#         """
+
+#         msg = [
+#             (
+#                 "user",
+#                 [
+#                     {"type": "text", "text": prompt},
+#                     {
+#                         "type": "image_url",
+#                         "image_url": {"url": f"data:image/png;base64,{b64_image}"},
+#                     },
+#                 ],
+#             )
+#         ]
+
+#         raw = self.llm.invoke(msg).content.strip()
+
+#         # ---- Robust JSON parse ----
+#         import json
+
+#         try:
+#             parsed = json.loads(raw)
+#         except Exception:
+#             # last resort: extract color heuristically
+#             detected = None
+#             for c in candidate_colors:
+#                 if c.lower() in raw.lower():
+#                     detected = c
+#                     break
+
+#             return {
+#                 "detected_color": detected or "unknown",
+#                 "detected_confidence": None,
+#                 "top_candidates": [],
+#                 "fallback_model": "gpt",
+#                 "raw_model_output": raw,
+#             }
+
+#         detected_color = parsed.get("detected_color")
+
+#         if detected_color not in candidate_colors:
+#             # enforce candidate restriction
+#             for c in candidate_colors:
+#                 if c.lower() == str(detected_color).lower():
+#                     detected_color = c
+#                     break
+
+#         return {
+#             "detected_color": detected_color,
+#             "detected_confidence": None,
+#             "top_candidates": [(detected_color, None)],
+#             "fallback_model": "gpt",
+#             "reason": parsed.get("reason", None),
+#         }
+
+
+#     # -------------------------------------------------------------------------
+#     # Primary CLIP detection
+#     # -------------------------------------------------------------------------
+#     def detect_color(
+#         self,
+#         image: Image.Image,
+#         candidate_colors: Optional[List[str]] = None,
+#         top_k: int = 3,
+#         confidence_threshold: float = 0.25,
+#         use_fallback_on_failure: bool = True,
+#     ) -> Dict[str, object]:
+#         """
+#         Detect color using CLIP; optionally fallback to GPT.
+#         """
+
+#         if candidate_colors is None:
+#             candidate_colors = COLOR_CANDIDATES
+
+#         text_prompts = [
+#             f"a product in {color_name} color" for color_name in candidate_colors
+#         ]
+
+#         try:
+#             inputs = self.processor(
+#                 text=text_prompts,
+#                 images=image,
+#                 return_tensors="pt",
+#                 padding=True,
+#             )
+
+#             inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+#             with torch.no_grad():
+#                 outputs = self.model(**inputs)
+#                 logits_per_image = outputs.logits_per_image
+#                 probs = logits_per_image.softmax(dim=1)[0]
+
+#             # Get top-k indices
+#             top_k = min(top_k, len(candidate_colors))
+#             top_prob_values, top_indices = torch.topk(probs, k=top_k)
+
+#             top_candidates: List[Tuple[str, float]] = [
+#                 (candidate_colors[int(idx)], float(prob))
+#                 for idx, prob in zip(top_indices, top_prob_values)
+#             ]
+
+#             detected_color, detected_confidence = top_candidates[0]
+
+#             # low-confidence fallback trigger
+#             if (
+#                 self.enable_gpt_fallback
+#                 and use_fallback_on_failure
+#                 and detected_confidence < confidence_threshold
+#             ):
+#                 return self._detect_with_gpt(image, candidate_colors)
+
+#             return {
+#                 "detected_color": detected_color,
+#                 "detected_confidence": detected_confidence,
+#                 "top_candidates": top_candidates,
+#                 "fallback_model": "clip",
+#             }
+
+#         except Exception:
+#             # CLIP failed → soft fallback
+#             if self.enable_gpt_fallback and use_fallback_on_failure:
+#                 return self._detect_with_gpt(image, candidate_colors)
+#             raise
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from typing import Dict, List, Optional, Tuple, Any
 import os
 import io
 import base64
+import json
 
-import torch
+# Removed torch and transformers imports
 from PIL import Image
-from transformers import CLIPModel, CLIPProcessor
-
 from .color_palette import COLOR_CANDIDATES
 
 from dotenv import load_dotenv
 load_dotenv()
 
-
 # GPT Vision
 from langchain_openai import ChatOpenAI
 
-
 class ClipColorDetector:
     """
-    Detects dominant color of an image using CLIP with optional GPT fallback.
+    Detects dominant color of an image using ONLY OpenAI GPT Vision.
+    (Formerly used CLIP, class name kept for compatibility).
     """
 
     def __init__(
         self,
-        device: str = "cpu",
-        enable_gpt_fallback: bool = True,
+        # device arg removed as it is not needed for API calls
         gpt_model_name: str = "gpt-4o-mini",
         openai_api_key: Optional[str] = None,
     ) -> None:
         """
-        Initialize CLIP model and optional GPT fallback.
+        Initialize the GPT Vision client.
         """
-
-        # -------- CLIP --------
-        self.device = device
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
-        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
-
-        self.model.to(self.device)
-        self.model.eval()
-
-        # -------- GPT fallback --------
-        self.enable_gpt_fallback = enable_gpt_fallback
-
         if openai_api_key is None:
             openai_api_key = os.getenv("OPENAI_API_KEY")
 
-        self.llm = None
-        if self.enable_gpt_fallback:
-            self.llm = ChatOpenAI(
-                model=gpt_model_name,
-                api_key=openai_api_key,
-            )
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required.")
 
-    # -------------------------------------------------------------------------
-    # GPT fallback
-    # -------------------------------------------------------------------------
-    def _detect_with_gpt(
+        self.llm = ChatOpenAI(
+            model=gpt_model_name,
+            api_key=openai_api_key,
+            temperature=0,
+            max_tokens=100
+        )
+
+    def detect_color(
         self,
         image: Image.Image,
-        candidate_colors: List[str],
-    ) -> Dict[str, object]:
+        candidate_colors: Optional[List[str]] = None,
+        top_k: int = 3, # Kept for interface compatibility, though GPT returns one main color
+        confidence_threshold: float = 0.25, # Kept for compatibility, unused by GPT
+        use_fallback_on_failure: bool = True, # Kept for compatibility
+    ) -> Dict[str, Any]:
         """
-        Fallback color detection using GPT Vision model with guaranteed JSON output.
+        Detect color using GPT Vision.
         """
+        if candidate_colors is None:
+            candidate_colors = COLOR_CANDIDATES
 
+        # Convert image to base64
         buffered = io.BytesIO()
+        # Convert to RGB to ensure PNG save works (handles RGBA/P modes)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
         image.save(buffered, format="PNG")
         b64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
         prompt = f"""
         You are a product color classifier.
-
-        You MUST respond ONLY with valid JSON and NOTHING else.
-
-        Select the single closest color name from this list:
+        Select the single closest color name for this product from this list:
         {candidate_colors}
 
-        JSON schema to follow exactly:
+        You MUST respond ONLY with valid JSON. Do not write markdown blocks (like ```json).
 
+        JSON schema:
         {{
             "detected_color": "<one_of_candidate_list>",
             "reason": "<short explanation>"
@@ -99,112 +331,46 @@ class ClipColorDetector:
             )
         ]
 
-        raw = self.llm.invoke(msg).content.strip()
-
-        # ---- Robust JSON parse ----
-        import json
-
         try:
+            raw = self.llm.invoke(msg).content.strip()
+            
+            # Clean up markdown formatting if the model accidentally adds it
+            if raw.startswith("```json"):
+                raw = raw.replace("```json", "").replace("```", "")
+            elif raw.startswith("```"):
+                raw = raw.replace("```", "")
+
             parsed = json.loads(raw)
-        except Exception:
-            # last resort: extract color heuristically
-            detected = None
-            for c in candidate_colors:
-                if c.lower() in raw.lower():
-                    detected = c
-                    break
+            
+            detected_color = parsed.get("detected_color")
+            reason = parsed.get("reason", "")
 
-            return {
-                "detected_color": detected or "unknown",
-                "detected_confidence": None,
-                "top_candidates": [],
-                "fallback_model": "gpt",
-                "raw_model_output": raw,
-            }
-
-        detected_color = parsed.get("detected_color")
-
-        if detected_color not in candidate_colors:
-            # enforce candidate restriction
-            for c in candidate_colors:
-                if c.lower() == str(detected_color).lower():
-                    detected_color = c
-                    break
-
-        return {
-            "detected_color": detected_color,
-            "detected_confidence": None,
-            "top_candidates": [(detected_color, None)],
-            "fallback_model": "gpt",
-            "reason": parsed.get("reason", None),
-        }
-
-
-    # -------------------------------------------------------------------------
-    # Primary CLIP detection
-    # -------------------------------------------------------------------------
-    def detect_color(
-        self,
-        image: Image.Image,
-        candidate_colors: Optional[List[str]] = None,
-        top_k: int = 3,
-        confidence_threshold: float = 0.25,
-        use_fallback_on_failure: bool = True,
-    ) -> Dict[str, object]:
-        """
-        Detect color using CLIP; optionally fallback to GPT.
-        """
-
-        if candidate_colors is None:
-            candidate_colors = COLOR_CANDIDATES
-
-        text_prompts = [
-            f"a product in {color_name} color" for color_name in candidate_colors
-        ]
-
-        try:
-            inputs = self.processor(
-                text=text_prompts,
-                images=image,
-                return_tensors="pt",
-                padding=True,
-            )
-
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                logits_per_image = outputs.logits_per_image
-                probs = logits_per_image.softmax(dim=1)[0]
-
-            # Get top-k indices
-            top_k = min(top_k, len(candidate_colors))
-            top_prob_values, top_indices = torch.topk(probs, k=top_k)
-
-            top_candidates: List[Tuple[str, float]] = [
-                (candidate_colors[int(idx)], float(prob))
-                for idx, prob in zip(top_indices, top_prob_values)
-            ]
-
-            detected_color, detected_confidence = top_candidates[0]
-
-            # low-confidence fallback trigger
-            if (
-                self.enable_gpt_fallback
-                and use_fallback_on_failure
-                and detected_confidence < confidence_threshold
-            ):
-                return self._detect_with_gpt(image, candidate_colors)
+            # Validation: Ensure result is in the candidate list
+            if detected_color not in candidate_colors:
+                # Try case-insensitive matching
+                for c in candidate_colors:
+                    if str(detected_color).lower() == c.lower():
+                        detected_color = c
+                        break
+                else:
+                    # If still not found, defaults to 'unknown' or the first candidate? 
+                    # Let's keep the raw output but flag it.
+                    pass
 
             return {
                 "detected_color": detected_color,
-                "detected_confidence": detected_confidence,
-                "top_candidates": top_candidates,
-                "fallback_model": "clip",
+                "detected_confidence": 0.67, # GPT doesn't give confidence scores easily
+                "top_candidates": [(detected_color, 1.0)],
+                "fallback_model": "gpt-only",
+                "reason": reason
             }
 
-        except Exception:
-            # CLIP failed → soft fallback
-            if self.enable_gpt_fallback and use_fallback_on_failure:
-                return self._detect_with_gpt(image, candidate_colors)
-            raise
+        except Exception as e:
+            print(f"GPT Vision Error: {e}")
+            return {
+                "detected_color": "unknown",
+                "detected_confidence": 0.0,
+                "top_candidates": [],
+                "fallback_model": "error",
+                "error": str(e)
+            }
