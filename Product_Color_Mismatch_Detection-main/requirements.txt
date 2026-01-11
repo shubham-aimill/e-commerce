@@ -6,6 +6,7 @@ uvicorn[standard]==0.32.0
 python-multipart==0.0.12
 python-dotenv==1.0.1
 pandas==2.2.3
+
 # ===============================
 # Core Utilities
 # ===============================
@@ -15,18 +16,13 @@ pillow==11.0.0
 pyyaml==6.0.2
 
 # ===============================
-# ML / Transformers (CPU-only, memory-safe)
-# ===============================
-torch==2.1.2
-transformers==4.36.2
-
-# ===============================
-# LangChain (minimal, compatible, lightweight)
+# AI & LLM (OpenAI Only)
 # ===============================
 langchain-core==0.3.29
 langchain-openai==0.2.9
+openai==1.57.4
 
 # ===============================
-# OpenAI SDK
+# Frontend (Optional)
 # ===============================
-openai==1.57.4
+streamlit
