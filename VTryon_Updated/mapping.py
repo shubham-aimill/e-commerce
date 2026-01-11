@@ -207,25 +207,54 @@ CATEGORY_SIZE_MAP = {
 # 3. CATEGORY-AWARE LOOKUP FUNCTION
 # --------------------------------------------------
 
-def get_mapped_size_by_category(
-    category,
-    gender,
-    from_brand,
-    from_size,
-    to_brand
-):
-    """Retrieves the mapped size based on brand, category, and gender"""
+# def get_mapped_size_by_category(
+#     category,
+#     gender,
+#     from_brand,
+#     from_size,
+#     to_brand
+# ):
+#     """Retrieves the mapped size based on brand, category, and gender"""
+#     try:
+#         return CATEGORY_SIZE_MAP[
+#             category
+#         ][
+#             gender
+#         ][
+#             from_brand.lower()
+#         ][
+#             str(from_size)
+#         ][
+#             to_brand.lower()
+#         ]
+#     except KeyError:
+#         return None
+def get_mapped_size_by_category(category, gender, from_brand, from_size, to_brand):
+    """Retrieves the mapped size with safety checks for case sensitivity"""
     try:
-        return CATEGORY_SIZE_MAP[
-            category
-        ][
-            gender
-        ][
-            from_brand.lower()
-        ][
-            str(from_size)
-        ][
-            to_brand.lower()
-        ]
-    except KeyError:
+        # 1. Normalize Category and Gender
+        # This handles inputs like "T-Shirts" -> "tshirts" or "Male" -> "male"
+        cat_key = category.lower().replace("-", "").strip()
+        gen_key = gender.lower().strip()
+        
+        # 2. Normalize Brands
+        from_b_key = from_brand.lower().strip()
+        to_b_key = to_brand.lower().strip()
+
+        # 3. Normalize Size
+        # If input is "m", convert to "M" (to match your dictionary keys). 
+        # If input is "42", keep as "42".
+        size_str = str(from_size).strip()
+        if size_str.isalpha():
+            size_key = size_str.upper() 
+        else:
+            size_key = size_str 
+
+        # 4. Perform the lookup
+        return CATEGORY_SIZE_MAP[cat_key][gen_key][from_b_key][size_key][to_b_key]
+
+    except KeyError as e:
+        # This print will show up in your terminal so you know exactly what failed
+        print(f"DEBUG: Mapping failed. Looking for path: [{cat_key}][{gen_key}][{from_b_key}][{size_key}][{to_b_key}]")
+        print(f"DEBUG: The specific key missing was: {e}")
         return None
