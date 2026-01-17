@@ -40,7 +40,7 @@ app = FastAPI(title="Gemini 3 Virtual Try-On API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for development and Render deployment
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
