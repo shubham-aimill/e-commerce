@@ -190,12 +190,12 @@ export async function getGarmentOptions(
     }
     // Handle network errors
     if (error instanceof TypeError) {
-      const isNetworkError =
+      const isNetworkError = 
         error.message.includes("fetch") ||
         error.message.includes("Failed to fetch") ||
         error.message.includes("NetworkError") ||
         error.message.includes("Network request failed");
-
+      
       if (isNetworkError) {
         throw new VtoApiError(
           `Could not connect to FastAPI backend at ${VTO_BASE_URL}. Please ensure the server is running.`,
@@ -249,12 +249,12 @@ export async function generateTryOn(
     }
     // Handle network errors
     if (error instanceof TypeError) {
-      const isNetworkError =
+      const isNetworkError = 
         error.message.includes("fetch") ||
         error.message.includes("Failed to fetch") ||
         error.message.includes("NetworkError") ||
         error.message.includes("Network request failed");
-
+      
       if (isNetworkError) {
         throw new VtoApiError(
           `Could not connect to FastAPI backend at ${VTO_BASE_URL}. Please ensure the server is running.`,

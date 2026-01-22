@@ -344,7 +344,7 @@ export default function AIPhotoshoot() {
       setVtoGarmentOptions(data.garments);
       setVtoState("options_loaded");
       setVtoError(null);
-      
+
       // Convert base64 images to blob URLs for display
       const imageUrlMap = new Map<string, string>();
       data.garments.forEach((garment) => {
@@ -1593,7 +1593,7 @@ export default function AIPhotoshoot() {
 
                 {/* Step 1: Find Styles Button (matching Streamlit) */}
                 <div className="mb-6">
-                  <Button
+                <Button
                     size="lg"
                     onClick={handleVtoGetOptions}
                     disabled={!vtoCurrentSize.trim() || vtoGetOptionsMutation.isPending}
@@ -1601,19 +1601,19 @@ export default function AIPhotoshoot() {
                       "w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300",
                       "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
                     )}
-                  >
+                >
                     {vtoGetOptionsMutation.isPending ? (
-                      <>
+                    <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Checking inventory...
-                      </>
-                    ) : (
-                      <>
+                    </>
+                  ) : (
+                    <>
                         <Sparkles className="w-5 h-5 mr-2" />
                         Find Styles
-                      </>
-                    )}
-                  </Button>
+                    </>
+                  )}
+                </Button>
                   
                   {vtoMappedSize && vtoState === "options_loaded" && (
                     <div className="mt-4 p-3 bg-success/10 rounded-lg border border-success/20 text-center">
@@ -1622,7 +1622,7 @@ export default function AIPhotoshoot() {
                       </p>
                     </div>
                   )}
-                </div>
+                    </div>
 
                 {/* Garment Selection (Compact - Hidden after selection) */}
                 {vtoGarmentOptions.length > 0 && !vtoSelectedGarmentPath && (
@@ -1649,13 +1649,13 @@ export default function AIPhotoshoot() {
                             ) : (
                               <div className="w-full h-full bg-muted flex items-center justify-center">
                                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                              </div>
-                            )}
+                  </div>
+                )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                               <p className="text-xs font-medium text-white text-center truncate">
                                 SKU {garment.sku_index}
                               </p>
-                            </div>
+                    </div>
                           </button>
                         );
                       })}
@@ -1684,7 +1684,7 @@ export default function AIPhotoshoot() {
                         <p className="text-xs text-muted-foreground">
                           {vtoGarmentOptions.find(g => g.path === vtoSelectedGarmentPath)?.filename || "Ready to generate"}
                         </p>
-                      </div>
+            </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -1757,10 +1757,10 @@ export default function AIPhotoshoot() {
                 {vtoActivePreviewImage ? (
                   <div className="flex-1 space-y-6 animate-fade-in">
                     {vtoHasResult && vtoActivePreviewId === "vto-generated" && (
-                      <div className="flex items-center justify-center gap-2 p-3 bg-success/10 rounded-lg border border-success/20">
-                        <CheckCircle className="w-5 h-5 text-success" />
-                        <span className="font-semibold text-success">Try-On Generated Successfully!</span>
-                      </div>
+                    <div className="flex items-center justify-center gap-2 p-3 bg-success/10 rounded-lg border border-success/20">
+                      <CheckCircle className="w-5 h-5 text-success" />
+                      <span className="font-semibold text-success">Try-On Generated Successfully!</span>
+                    </div>
                     )}
                     <div className="relative group rounded-2xl overflow-hidden border-2 border-border bg-muted/20 shadow-2xl transition-all duration-500">
                       <img
@@ -1790,26 +1790,26 @@ export default function AIPhotoshoot() {
                         )}
                       </div>
                       {vtoHasResult && vtoActivePreviewId === "vto-generated" && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleVtoDownload}
-                            className="gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleVtoRegenerate}
-                            className="gap-2"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                            Regenerate
-                          </Button>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleVtoDownload}
+                          className="gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleVtoRegenerate}
+                          className="gap-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Regenerate
+                        </Button>
+                      </div>
                       )}
                     </div>
                   </div>
@@ -1913,7 +1913,7 @@ export default function AIPhotoshoot() {
             </div>
           </div>
         </TabsContent>
-        </Tabs>
+      </Tabs>
       </div>
 
       {/* Image Focus Modal */}
