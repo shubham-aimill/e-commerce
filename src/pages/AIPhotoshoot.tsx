@@ -144,6 +144,7 @@ export default function AIPhotoshoot() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [generatedViews, setGeneratedViews] = useState<GeneratedView[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [photoshootExpandedImageUrl, setPhotoshootExpandedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Virtual Try-On states
@@ -714,6 +715,24 @@ export default function AIPhotoshoot() {
     };
   }, [vtoGeneratedImageUrl]);
 
+  // Photoshoot lightbox: lock scroll + close on ESC
+  useEffect(() => {
+    if (!photoshootExpandedImageUrl) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPhotoshootExpandedImageUrl(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [photoshootExpandedImageUrl]);
+
   const vtoIsReady = vtoCurrentSize.trim() && !vtoGenerateMutation.isPending;
   const vtoHasResult = !!vtoGeneratedImageUrl && !vtoGenerateMutation.isPending && vtoState === "completed";
 
@@ -1018,7 +1037,13 @@ export default function AIPhotoshoot() {
           />
 
           <div 
-            className="aspect-[4/3] bg-gradient-to-br from-sand-50 to-sand-100 rounded-xl mb-4 flex items-center justify-center border-2 border-dashed border-border/50 relative overflow-hidden cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group"
+            className={cn(
+              // Larger, more prominent preview while maintaining aspect ratio
+              "aspect-[16/10] min-h-[420px] lg:min-h-[520px] rounded-xl mb-4 flex items-center justify-center border-2 border-dashed border-border/50 relative overflow-hidden transition-all duration-300",
+              // Subtle background only when empty/loading
+              (!uploadedImage && generatedViews.length === 0) && "bg-gradient-to-br from-sand-50 to-sand-100 cursor-pointer hover:border-primary/50 hover:bg-primary/5",
+              (uploadedImage || generatedViews.length > 0) && "bg-muted/10"
+            )}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={!uploadedImage ? handleBrowseFiles : undefined}
@@ -1041,50 +1066,29 @@ export default function AIPhotoshoot() {
                   </TabsList>
                   {generatedViews.map((view) => (
                     <TabsContent key={view.view} value={view.view} className="mt-0 m-0 h-[calc(100%-60px)]">
-                      <div className="relative w-full h-full group">
+                      <button
+                        type="button"
+                        className="w-full h-full rounded-lg overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        onClick={() => setPhotoshootExpandedImageUrl(view.imageUrl)}
+                        aria-label={`Expand ${view.view} view`}
+                      >
                         <img 
                           src={view.imageUrl} 
                           alt={`${view.view} view`}
-                          className="w-full h-full object-cover rounded-lg"
+                          className="w-full h-full object-contain rounded-lg"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveImage();
-                            }}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      </button>
                     </TabsContent>
                   ))}
                 </Tabs>
               </div>
             ) : uploadedImage ? (
-              <div className="relative w-full h-full group">
+              <div className="relative w-full h-full">
                 <img 
                   src={uploadedImage} 
                   alt="Uploaded product" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveImage();
-                    }}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
                 {uploadedFileName && (
                   <div className="absolute bottom-2 left-2 right-2">
                     <div className="bg-black/70 text-white text-xs px-2 py-1 rounded truncate">
@@ -1104,6 +1108,27 @@ export default function AIPhotoshoot() {
               </div>
             )}
           </div>
+
+          {/* Lightbox / Expanded image (AI Photoshoot only) */}
+          {photoshootExpandedImageUrl && (
+            <div
+              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setPhotoshootExpandedImageUrl(null)}
+            >
+              <div
+                className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <img
+                  src={photoshootExpandedImageUrl}
+                  alt="Expanded preview"
+                  className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
