@@ -19,6 +19,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Preload MiniCPM model if it's the selected backend (improves first request speed)
+@app.on_event("startup")
+async def startup_event():
+    """Preload models at startup to avoid first-request delay"""
+    import os
+    backend = os.environ.get("VISION_BACKEND", "gpt4o").lower()
+    
+    if backend == "minicpm":
+        print("[Startup] Preloading MiniCPM-V model...")
+        try:
+            from app.vision_minicpm import load_backend
+            load_backend()  # This will cache the model
+            print("[Startup] MiniCPM-V model preloaded successfully!")
+        except Exception as e:
+            print(f"[Startup] Warning: Could not preload MiniCPM-V: {e}")
+            print("[Startup] Model will be loaded on first request instead.")
+    else:
+        print(f"[Startup] Using {backend} backend (no preloading needed)")
+
 # Ensure upload directory exists
 UPLOAD_DIR = "temp"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -100,7 +119,7 @@ async def generate_description_endpoint(
         f.write(contents)
 
     try:
-        # Generate description
+        # Generate description (this may take 10-60 seconds depending on backend)
         ai_result = generate_description(file_path, language)
         
         return {
@@ -110,10 +129,19 @@ async def generate_description_endpoint(
             "bullet_points": ai_result.get("bullet_points", []),
             "attributes": ai_result.get("attributes", {})
         }
+    except Exception as e:
+        # Better error handling
+        raise HTTPException(
+            status_code=500,
+            detail=f"Description generation failed: {str(e)}"
+        )
     finally:
         # Clean up temporary file
         if os.path.exists(file_path):
-            os.remove(file_path)
+            try:
+                os.remove(file_path)
+            except:
+                pass  # Ignore cleanup errors
 
 # 3️⃣ Generate Product Description
 @app.post("/image-to-text/generate")

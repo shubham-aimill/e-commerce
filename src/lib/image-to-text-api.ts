@@ -3,7 +3,8 @@
  * Connects to the FastAPI backend for image-to-text description generation
  */
 
-const IMAGE_TO_TEXT_BASE_URL = import.meta.env.VITE_IMAGE_TO_TEXT_API_URL ?? "https://e-commerce-1-imageto-txt.onrender.com";
+// Use environment variable if available, otherwise default to localhost
+const IMAGE_TO_TEXT_BASE_URL = import.meta.env.VITE_IMAGE_TO_TEXT_API_URL || "http://localhost:8010";
 
 export interface GenerateDescriptionResponse {
   title: string;
@@ -122,24 +123,50 @@ export async function generateDescription(
   file: File,
   language: string
 ): Promise<GenerateDescriptionResponse> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/generate-description`;
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/generate-description`;
   const formData = new FormData();
   formData.append("image", file);
   formData.append("language", language);
 
   try {
+    // Add timeout for long-running requests (2 minutes for AI processing)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
+    
     const res = await fetch(url, {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     return await handleResponse<GenerateDescriptionResponse>(res);
   } catch (error) {
     if (error instanceof ImageToTextApiError) {
       throw error;
     }
+    
+    // Better error messages for common issues
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ImageToTextApiError(
+        "Request timed out. The backend may be slow or not responding. Please try again.",
+        408
+      );
+    }
+    
+    // Check if it's a network error
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ImageToTextApiError(
+        `Cannot connect to backend at ${baseUrl}. Please ensure the FastAPI server is running on port 8010. Start it with: uvicorn app.main:app --reload --port 8010`,
+        0
+      );
+    }
+    
     throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
+      `Could not connect to FastAPI backend at ${baseUrl}. Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please ensure the server is running.`,
       0
     );
   }
@@ -160,10 +187,16 @@ export async function uploadImage(
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds for upload
+    
     const res = await fetch(url, {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     return await handleResponse<UploadImageResponse>(res);
   } catch (error) {
@@ -190,6 +223,9 @@ export async function generateProductText(params: {
   const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/generate`;
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes for generation
+    
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -202,7 +238,10 @@ export async function generateProductText(params: {
         marketplace: params.marketplace,
         sku: params.sku,
       }),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     return await handleResponse<GenerateProductTextResponse>(res);
   } catch (error) {

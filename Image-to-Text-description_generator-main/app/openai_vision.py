@@ -1,6 +1,8 @@
 import base64
 import os
 import json
+from PIL import Image
+from io import BytesIO
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -9,9 +11,24 @@ load_dotenv()
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
-def _encode_image_b64_uri(image_path: str) -> str:
-    with open(image_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode("utf-8")
+def _encode_image_b64_uri(image_path: str, max_size: int = 1024) -> str:
+    """
+    Encode image to base64, with optional resizing for large images.
+    Resizing speeds up processing significantly for high-resolution images.
+    """
+    img = Image.open(image_path).convert("RGB")
+    
+    # Resize if image is too large (reduces encoding time and API payload size)
+    if max(img.width, img.height) > max_size:
+        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+    
+    # Convert to JPEG bytes
+    buffer = BytesIO()
+    img.save(buffer, format="JPEG", quality=85, optimize=True)
+    img_bytes = buffer.getvalue()
+    
+    # Encode to base64
+    b64 = base64.b64encode(img_bytes).decode("utf-8")
     return f"data:image/jpeg;base64,{b64}"
 
 

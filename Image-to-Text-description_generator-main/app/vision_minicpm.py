@@ -7,6 +7,11 @@ print(">>> USING vision_minicpm.py FROM:", __file__)
 
 MODEL_ID = "openbmb/MiniCPM-V-2_6"
 
+# Global model cache - loaded once and reused
+_model_cache = None
+_tokenizer_cache = None
+_device = None
+
 
 def _select_device():
     if torch.cuda.is_available():
@@ -16,32 +21,44 @@ def _select_device():
     return torch.device("cpu")
 
 
-device = _select_device()
-
-
 def load_backend():
     """
-    Always uses trust_remote_code=True
+    Load model once and cache it for reuse.
+    This is a HUGE performance improvement - model loading takes 10-30 seconds!
     """
-
-    tokenizer = AutoTokenizer.from_pretrained(
+    global _model_cache, _tokenizer_cache, _device
+    
+    if _model_cache is not None and _tokenizer_cache is not None:
+        # Model already loaded, reuse it
+        return _model_cache, _tokenizer_cache
+    
+    # First time loading
+    if _device is None:
+        _device = _select_device()
+        print(f"[MiniCPM] Selected device: {_device}")
+    
+    print(f"[MiniCPM] Loading model (this happens once, takes ~10-30 seconds)...")
+    
+    _tokenizer_cache = AutoTokenizer.from_pretrained(
         MODEL_ID,
         trust_remote_code=True
     )
 
-    model = AutoModel.from_pretrained(
+    _model_cache = AutoModel.from_pretrained(
         MODEL_ID,
         trust_remote_code=True,
-        torch_dtype=torch.float16 if device.type != "cpu" else torch.float32
-    ).to(device).eval()
+        torch_dtype=torch.float16 if _device.type != "cpu" else torch.float32
+    ).to(_device).eval()
 
-    print(f"[MiniCPM] Loaded on {device}")
+    print(f"[MiniCPM] Model loaded and cached on {_device}")
 
-    return model, tokenizer
+    return _model_cache, _tokenizer_cache
 
 
 def describe_image_json_minicpm(image_path: str, language: str):
-
+    """
+    Generate description using cached model (much faster after first load)
+    """
     model, tokenizer = load_backend()
 
     # ---- load image ----
@@ -86,7 +103,7 @@ Rules:
             image=image,
             msgs=msgs,
             tokenizer=tokenizer,
-            device=device,
+            device=_device,
             max_new_tokens=600,
             do_sample=False
         )

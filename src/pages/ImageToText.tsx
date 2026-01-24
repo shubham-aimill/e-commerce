@@ -209,10 +209,23 @@ export default function ImageToText() {
       });
     },
     onError: (error: Error) => {
+      // Extract more helpful error message
+      let errorMessage = error.message || "Failed to generate description";
+      
+      // Provide specific guidance for common errors
+      if (error.message.includes("Not Found") || error.message.includes("404")) {
+        errorMessage = "Backend server not found. Please ensure the FastAPI backend is running on port 8010. Start it with: uvicorn app.main:app --reload --port 8010";
+      } else if (error.message.includes("Cannot connect") || error.message.includes("fetch")) {
+        errorMessage = "Cannot connect to backend. Please ensure the FastAPI server is running on port 8010.";
+      } else if (error.message.includes("timeout") || error.message.includes("timed out")) {
+        errorMessage = "Request timed out. The backend may be processing slowly. Please try again.";
+      }
+      
       toast({
         title: "Generation failed",
-        description: error.message || "Failed to generate description",
+        description: errorMessage,
         variant: "destructive",
+        duration: 10000, // Show longer for important errors
       });
     },
   });
