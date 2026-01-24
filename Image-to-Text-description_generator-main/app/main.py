@@ -45,6 +45,11 @@ app.mount("/temp", StaticFiles(directory=UPLOAD_DIR), name="temp")
 
 # -------------------- Endpoints --------------------
 
+# 0️⃣ Health (for Render / load balancers)
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "image-to-text"}
+
 # 1️⃣ Get KPIs
 @app.get("/image-to-text/kpis")
 async def get_kpis():
@@ -77,10 +82,13 @@ async def upload_image(file: UploadFile = File(...), sku: str = None):
     with open(file_path, "wb") as f:
         f.write(contents)
 
+    base_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("BASE_URL") or "http://localhost:8010"
+    base_url = base_url.rstrip("/")
+
     return {
         "success": True,
         "imageId": file_id,
-        "url": f"http://localhost:8010/temp/{file_id}{extension}",
+        "url": f"{base_url}/temp/{file_id}{extension}",
         "filename": file.filename,
         "sku": sku
     }
@@ -253,4 +261,5 @@ async def approve_translations(payload: dict = Body(...)):
 # -------------------- Main --------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8010, reload=True)
+    port = int(os.environ.get("PORT", 8010))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)

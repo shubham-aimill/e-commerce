@@ -1,0 +1,16 @@
+# Render Blueprint for Image-to-Text API
+# Use this if Image-to-Text-description_generator-main is the repo root (or rootDir).
+# Otherwise, set these values manually in the Render Dashboard.
+
+services:
+  - type: web
+    name: image-to-text
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: VISION_BACKEND
+        value: gpt4o

@@ -1,10 +1,10 @@
 /**
  * Image-to-Text API Client
  * Connects to the FastAPI backend for image-to-text description generation
+ * Backend URL: https://e-commerce-1-imageto-txt.onrender.com
  */
 
-// Use environment variable if available, otherwise default to localhost
-const IMAGE_TO_TEXT_BASE_URL = import.meta.env.VITE_IMAGE_TO_TEXT_API_URL || "http://localhost:8010";
+const IMAGE_TO_TEXT_BASE_URL = "https://e-commerce-1-imageto-txt.onrender.com";
 
 export interface GenerateDescriptionResponse {
   title: string;
@@ -94,16 +94,21 @@ export class ImageToTextApiError extends Error {
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let errorMessage = `Request failed with status ${res.status}`;
-    try {
-      const contentType = res.headers.get("content-type");
-      if (contentType?.includes("application/json")) {
-        const body = await res.json();
-        errorMessage = body.detail || body.error?.message || errorMessage;
-      } else {
-        errorMessage = await res.text() || errorMessage;
+    if (res.status === 502) {
+      errorMessage =
+        "Image-to-Text service unavailable (502). The Render deployment may be starting up, sleeping, or misconfigured. Ensure the start command uses --port $PORT and Health Check Path is /health. Try again in a moment.";
+    } else {
+      try {
+        const contentType = res.headers.get("content-type");
+        if (contentType?.includes("application/json")) {
+          const body = await res.json();
+          errorMessage = body.detail || body.error?.message || errorMessage;
+        } else {
+          errorMessage = (await res.text()) || errorMessage;
+        }
+      } catch {
+        // Ignore parse errors
       }
-    } catch {
-      // Ignore parse errors
     }
     throw new ImageToTextApiError(errorMessage, res.status);
   }
@@ -157,18 +162,12 @@ export async function generateDescription(
       );
     }
     
-    // Check if it's a network error
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new ImageToTextApiError(
-        `Cannot connect to backend at ${baseUrl}. Please ensure the FastAPI server is running on port 8010. Start it with: uvicorn app.main:app --reload --port 8010`,
-        0
-      );
-    }
-    
-    throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${baseUrl}. Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please ensure the server is running.`,
-      0
-    );
+    // Network/CORS failure (often 502: gateway returns error without CORS headers)
+    const msg =
+      error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+        ? `Cannot connect to Image-to-Text backend at ${baseUrl}. This often appears as CORS + 502 when the Render service is down, sleeping, or using a fixed port instead of $PORT. Check RENDER_DEPLOYMENT.md and try again.`
+        : `Could not connect to Image-to-Text backend at ${baseUrl}. ${error instanceof Error ? error.message : "Unknown error"}. If you see CORS or 502, the backend may be misconfigured on Render.`;
+    throw new ImageToTextApiError(msg, 0);
   }
 }
 
@@ -179,7 +178,9 @@ export async function uploadImage(
   file: File,
   sku?: string
 ): Promise<UploadImageResponse> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/upload`;
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/image-to-text/upload`;
   const formData = new FormData();
   formData.append("file", file);
   if (sku) {
@@ -200,13 +201,12 @@ export async function uploadImage(
 
     return await handleResponse<UploadImageResponse>(res);
   } catch (error) {
-    if (error instanceof ImageToTextApiError) {
-      throw error;
-    }
-    throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
-      0
-    );
+    if (error instanceof ImageToTextApiError) throw error;
+    const msg =
+      error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+        ? `Cannot connect to Image-to-Text backend. CORS/502 often means Render is down or not using --port $PORT.`
+        : `Could not connect to Image-to-Text backend at ${baseUrl}. ${error instanceof Error ? error.message : "Unknown error"}.`;
+    throw new ImageToTextApiError(msg, 0);
   }
 }
 
@@ -220,7 +220,9 @@ export async function generateProductText(params: {
   marketplace?: string;
   sku?: string;
 }): Promise<GenerateProductTextResponse> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/generate`;
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/image-to-text/generate`;
 
   try {
     const controller = new AbortController();
@@ -249,7 +251,7 @@ export async function generateProductText(params: {
       throw error;
     }
     throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
+      `Could not connect to backend at ${baseUrl}. Please check your connection and try again.`,
       0
     );
   }
@@ -262,7 +264,9 @@ export async function getTranslations(
   imageId: string,
   language?: string
 ): Promise<TranslationsResponse> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/translations/${imageId}${
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/image-to-text/translations/${imageId}${
     language ? `?language=${language}` : ""
   }`;
 
@@ -270,13 +274,12 @@ export async function getTranslations(
     const res = await fetch(url);
     return await handleResponse<TranslationsResponse>(res);
   } catch (error) {
-    if (error instanceof ImageToTextApiError) {
-      throw error;
-    }
-    throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
-      0
-    );
+    if (error instanceof ImageToTextApiError) throw error;
+    const msg =
+      error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+        ? `Cannot connect to Image-to-Text backend. CORS/502 often means Render is down or not using --port $PORT.`
+        : `Could not connect to Image-to-Text backend at ${baseUrl}. ${error instanceof Error ? error.message : "Unknown error"}.`;
+    throw new ImageToTextApiError(msg, 0);
   }
 }
 
@@ -286,19 +289,20 @@ export async function getTranslations(
 export async function getQualityCheck(
   imageId: string
 ): Promise<QualityCheckResponse> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/quality-check/${imageId}`;
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/image-to-text/quality-check/${imageId}`;
 
   try {
     const res = await fetch(url);
     return await handleResponse<QualityCheckResponse>(res);
   } catch (error) {
-    if (error instanceof ImageToTextApiError) {
-      throw error;
-    }
-    throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
-      0
-    );
+    if (error instanceof ImageToTextApiError) throw error;
+    const msg =
+      error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+        ? `Cannot connect to Image-to-Text backend. CORS/502 often means Render is down or not using --port $PORT.`
+        : `Could not connect to Image-to-Text backend at ${baseUrl}. ${error instanceof Error ? error.message : "Unknown error"}.`;
+    throw new ImageToTextApiError(msg, 0);
   }
 }
 
@@ -306,19 +310,20 @@ export async function getQualityCheck(
  * Get KPIs
  */
 export async function getKPIs(): Promise<KPIsResponse> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/kpis`;
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/image-to-text/kpis`;
 
   try {
     const res = await fetch(url);
     return await handleResponse<KPIsResponse>(res);
   } catch (error) {
-    if (error instanceof ImageToTextApiError) {
-      throw error;
-    }
-    throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
-      0
-    );
+    if (error instanceof ImageToTextApiError) throw error;
+    const msg =
+      error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+        ? `Cannot connect to Image-to-Text backend. CORS/502 often means Render is down or not using --port $PORT.`
+        : `Could not connect to Image-to-Text backend at ${baseUrl}. ${error instanceof Error ? error.message : "Unknown error"}.`;
+    throw new ImageToTextApiError(msg, 0);
   }
 }
 
@@ -329,7 +334,9 @@ export async function approveTranslations(params: {
   imageId: string;
   languages?: string[];
 }): Promise<{ success: boolean; approved: number; message: string }> {
-  const url = `${IMAGE_TO_TEXT_BASE_URL}/image-to-text/approve`;
+  // Ensure base URL doesn't have trailing slash
+  const baseUrl = IMAGE_TO_TEXT_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/image-to-text/approve`;
 
   try {
     const res = await fetch(url, {
@@ -345,12 +352,11 @@ export async function approveTranslations(params: {
 
     return await handleResponse<{ success: boolean; approved: number; message: string }>(res);
   } catch (error) {
-    if (error instanceof ImageToTextApiError) {
-      throw error;
-    }
-    throw new ImageToTextApiError(
-      `Could not connect to FastAPI backend at ${IMAGE_TO_TEXT_BASE_URL}. Please ensure the server is running.`,
-      0
-    );
+    if (error instanceof ImageToTextApiError) throw error;
+    const msg =
+      error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+        ? `Cannot connect to Image-to-Text backend. CORS/502 often means Render is down or not using --port $PORT.`
+        : `Could not connect to Image-to-Text backend at ${baseUrl}. ${error instanceof Error ? error.message : "Unknown error"}.`;
+    throw new ImageToTextApiError(msg, 0);
   }
 }
