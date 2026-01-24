@@ -133,6 +133,57 @@ const mockTemplates = {
   ]
 };
 
+// Full-page image overlay component
+function FullPageImageOverlay({ 
+  imageUrl, 
+  onClose 
+}: { 
+  imageUrl: string; 
+  onClose: () => void;
+}) {
+  // Prevent body scrolling when overlay is open
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    
+    // Handle ESC key
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    
+    return () => {
+      document.body.style.overflow = originalStyle;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Expanded image preview"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={imageUrl}
+          alt="Expanded preview"
+          className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+          draggable={false}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function AIPhotoshoot() {
   const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -936,32 +987,32 @@ export default function AIPhotoshoot() {
                       key={template.id}
                       onClick={() => setSelectedTemplate(String(template.id))}
                       className={cn(
-                        "p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 group",
-                        "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
+                        "p-4 rounded-xl border cursor-pointer transition-all duration-300 group",
+                        "hover:border-primary/50 hover:bg-primary/5 hover:shadow-lg",
                         selectedTemplate === String(template.id)
-                          ? "border-primary bg-primary/10 shadow-md scale-[1.02]" 
-                          : "border-border/50 hover:scale-[1.01]"
+                          ? "border-primary bg-primary/10 shadow-lg" 
+                          : "border-border/50 shadow-sm"
                       )}
                     >
-                      <div className="aspect-square bg-gradient-to-br from-sand-100 to-sand-200 rounded-lg mb-3 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                      <div className="aspect-square bg-muted/30 rounded-lg mb-3 overflow-hidden flex items-center justify-center p-2">
                         {template.previewUrl ? (
                           <img 
                             src={template.previewUrl} 
                             alt={template.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                             onError={(e) => {
                               // Fallback to placeholder if image fails to load
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
                               const parent = target.parentElement;
                               if (parent) {
-                                parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><Camera class="w-8 h-8 text-sand-400" /></div>';
+                                parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><Camera class="w-8 h-8 text-muted-foreground/40" /></div>';
                               }
                             }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Camera className="w-8 h-8 text-sand-400" />
+                            <Camera className="w-8 h-8 text-muted-foreground/40" />
                           </div>
                         )}
                       </div>
@@ -1109,25 +1160,12 @@ export default function AIPhotoshoot() {
             )}
           </div>
 
-          {/* Lightbox / Expanded image (AI Photoshoot only) */}
+          {/* Full-page image overlay (AI Photoshoot only) */}
           {photoshootExpandedImageUrl && (
-            <div
-              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-              role="dialog"
-              aria-modal="true"
-              onClick={() => setPhotoshootExpandedImageUrl(null)}
-            >
-              <div
-                className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <img
-                  src={photoshootExpandedImageUrl}
-                  alt="Expanded preview"
-                  className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
-                />
-              </div>
-            </div>
+            <FullPageImageOverlay
+              imageUrl={photoshootExpandedImageUrl}
+              onClose={() => setPhotoshootExpandedImageUrl(null)}
+            />
           )}
 
           <div className="flex items-center justify-between mb-4">
