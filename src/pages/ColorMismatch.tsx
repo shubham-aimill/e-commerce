@@ -45,8 +45,6 @@ export default function ColorMismatch() {
   const [detectionResult, setDetectionResult] = useState<ColorDetectionResult | null>(null);
   const [matchResult, setMatchResult] = useState<DetectAndMatchResult | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  // Default to mismatches only to streamline workflow and reduce data load
-  const [verdictFilter, setVerdictFilter] = useState<"All" | "Match" | "Mismatch">("Mismatch");
   const [colorFilter, setColorFilter] = useState<string[]>([]);
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState<"test" | "browse">("test");
@@ -71,11 +69,8 @@ export default function ColorMismatch() {
     const colorColumn = dataset.color_column;
     const nameColumn = dataset.name_column;
 
-    let rows = dataset.rows;
-
-    if (verdictFilter !== "All") {
-      rows = rows.filter((row) => row["Verdict"] === verdictFilter);
-    }
+    // Always focus on mismatches only
+    let rows = dataset.rows.filter((row) => row["Verdict"] === "Mismatch");
 
     if (colorColumn && colorFilter.length > 0) {
       rows = rows.filter((row) => colorFilter.includes(String(row[colorColumn] ?? "")));
@@ -91,7 +86,7 @@ export default function ColorMismatch() {
     }
 
     return { rows, colorColumn, nameColumn };
-  }, [dataset, verdictFilter, colorFilter, searchText]);
+  }, [dataset, colorFilter, searchText]);
 
   // Health check query
   const { data: healthData, refetch: checkHealthStatus, isFetching: isHealthChecking, error: healthError } = useQuery({
@@ -752,7 +747,6 @@ export default function ColorMismatch() {
                     size="sm"
                     className="mt-4"
                     onClick={() => {
-                      setVerdictFilter("All");
                       setColorFilter([]);
                       setSearchText("");
                     }}
@@ -772,25 +766,7 @@ export default function ColorMismatch() {
                         <h4 className="font-semibold text-sm text-foreground">Filters</h4>
                       </div>
                       <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground">Match Status</label>
-                          <div className="flex flex-col gap-2">
-                            {(["All", "Match", "Mismatch"] as const).map((value) => (
-                              <Button
-                                key={value}
-                                size="sm"
-                                variant={verdictFilter === value ? "default" : "outline"}
-                                onClick={() => setVerdictFilter(value)}
-                                className="w-full justify-start"
-                              >
-                                {value === "All" && "📊"}
-                                {value === "Match" && "✓"}
-                                {value === "Mismatch" && "✗"}
-                                <span className="ml-2">{value}</span>
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
+                        {/* Match status filter removed - always focusing on mismatches only */}
 
                         {filteredDataset.colorColumn && (
                           <div className="space-y-2">
