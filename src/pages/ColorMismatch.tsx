@@ -45,7 +45,8 @@ export default function ColorMismatch() {
   const [detectionResult, setDetectionResult] = useState<ColorDetectionResult | null>(null);
   const [matchResult, setMatchResult] = useState<DetectAndMatchResult | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [verdictFilter, setVerdictFilter] = useState<"All" | "Match" | "Mismatch">("All");
+  // Default to mismatches only to streamline workflow and reduce data load
+  const [verdictFilter, setVerdictFilter] = useState<"All" | "Match" | "Mismatch">("Mismatch");
   const [colorFilter, setColorFilter] = useState<string[]>([]);
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState<"test" | "browse">("test");

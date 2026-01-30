@@ -12,6 +12,8 @@ import {
   Loader2,
   BarChart3,
   Languages,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,10 @@ interface MismatchRow {
   issueType: string;
   listingProb: number;
   impactScore: number;
+  /** Listing title - editable inline */
+  title?: string;
+  /** Short description - editable inline */
+  description?: string;
 }
 
 interface MismatchListResponse {
@@ -103,7 +109,9 @@ const mockTableData: MismatchRow[] = [
     category: "Fashion",
     issueType: "Color Mismatch",
     listingProb: 45,
-    impactScore: 4.5
+    impactScore: 4.5,
+    title: "Men's Blue Cotton T-Shirt",
+    description: "Classic fit cotton tee. Listed as Navy but image shows Sky Blue.",
   },
   {
     sku: "SKU-3291",
@@ -114,7 +122,9 @@ const mockTableData: MismatchRow[] = [
     category: "Home",
     issueType: "Attribute Error",
     listingProb: 72,
-    impactScore: 3.2
+    impactScore: 3.2,
+    title: "Wooden Side Table",
+    description: "Solid wood side table. Material listed as Oak, image suggests Teak.",
   },
   {
     sku: "SKU-1056",
@@ -125,7 +135,9 @@ const mockTableData: MismatchRow[] = [
     category: "Fashion",
     issueType: "Multiple Issues",
     listingProb: 15,
-    impactScore: 4.9
+    impactScore: 4.9,
+    title: "Women's Floral Dress",
+    description: "Midi dress. Color/size mismatch between listing and image.",
   },
   {
     sku: "SKU-7823",
@@ -136,7 +148,9 @@ const mockTableData: MismatchRow[] = [
     category: "Electronics",
     issueType: "Localization",
     listingProb: 88,
-    impactScore: 2.1
+    impactScore: 2.1,
+    title: "Wireless Bluetooth Earbuds",
+    description: "No Tamil translation for product description.",
   },
   {
     sku: "SKU-4521",
@@ -147,7 +161,9 @@ const mockTableData: MismatchRow[] = [
     category: "Home",
     issueType: "Size Mismatch",
     listingProb: 55,
-    impactScore: 3.8
+    impactScore: 3.8,
+    title: "Bookshelf 5-Tier",
+    description: "Dimensions in listing do not match image specifications.",
   },
 ];
 
@@ -176,6 +192,15 @@ export default function MismatchEngine() {
   const [issueType, setIssueType] = useState("all");
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  // Default to mismatches only to streamline workflow and reduce data load
+  const [viewMode, setViewMode] = useState<"mismatches" | "all">("mismatches");
+  // Inline editing and bulk update
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const [editingCell, setEditingCell] = useState<{ sku: string; field: "title" | "description" } | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+  const [localEdits, setLocalEdits] = useState<Record<string, { title?: string; description?: string }>>({});
+  const [bulkDescription, setBulkDescription] = useState("");
+  const [bulkTitle, setBulkTitle] = useState("");
 
   // Build query params
   const queryParams = new URLSearchParams();
@@ -186,6 +211,7 @@ export default function MismatchEngine() {
   if (language !== "all") queryParams.set("language", language);
   if (region !== "all") queryParams.set("region", region);
   if (issueType !== "all") queryParams.set("issueType", issueType);
+  if (viewMode === "mismatches") queryParams.set("mismatchesOnly", "true");
   queryParams.set("page", page.toString());
   queryParams.set("limit", "50");
 
@@ -258,6 +284,49 @@ export default function MismatchEngine() {
     },
   });
 
+  // Inline / bulk description update mutation
+  const updateDescriptionMutation = useMutation({
+    mutationFn: async (payload: { sku: string; title?: string; description?: string } | { skus: string[]; title?: string; description?: string }) => {
+      if ("skus" in payload) {
+        return apiClient.post<{ success: boolean; updated: number }>("/mismatch/bulk-update", payload);
+      }
+      return apiClient.put<{ success: boolean }>(`/mismatch/sku/${payload.sku}/description`, { title: payload.title, description: payload.description });
+    },
+    onSuccess: (_, variables) => {
+      if ("skus" in variables) {
+        variables.skus.forEach((sku) => {
+          setLocalEdits((prev) => ({
+            ...prev,
+            [sku]: {
+              ...prev[sku],
+              ...(variables.title !== undefined && { title: variables.title }),
+              ...(variables.description !== undefined && { description: variables.description }),
+            },
+          }));
+        });
+        setSelectedRowIds(new Set());
+        setBulkTitle("");
+        setBulkDescription("");
+        toast({ title: "Bulk update applied", description: `${variables.skus.length} listing(s) updated.` });
+      } else {
+        setLocalEdits((prev) => ({
+          ...prev,
+          [variables.sku]: {
+            ...prev[variables.sku],
+            ...(variables.title !== undefined && { title: variables.title }),
+            ...(variables.description !== undefined && { description: variables.description }),
+          },
+        }));
+        setEditingCell(null);
+        toast({ title: "Updated", description: "Listing updated successfully." });
+      }
+      queryClient.invalidateQueries({ queryKey: ["mismatch"] });
+    },
+    onError: () => {
+      toast({ title: "Update failed", description: "Backend may not support this endpoint. Try again or check API.", variant: "destructive" });
+    },
+  });
+
   // Fix mutation
   const fixMutation = useMutation({
     mutationFn: async (data: { sku: string; action: string; parameters?: Record<string, unknown> }) => {
@@ -318,6 +387,73 @@ export default function MismatchEngine() {
     });
   };
 
+  const getDisplayValue = (row: MismatchRow, field: "title" | "description") =>
+    localEdits[row.sku]?.[field] ?? row[field] ?? "";
+
+  const startEdit = (sku: string, field: "title" | "description") => {
+    const row = filteredData.find((r) => r.sku === sku);
+    if (!row) return;
+    setEditingCell({ sku, field });
+    setEditingValue(getDisplayValue(row, field));
+  };
+
+  const saveEdit = () => {
+    if (!editingCell) return;
+    const value = editingValue.trim();
+    setLocalEdits((prev) => ({
+      ...prev,
+      [editingCell.sku]: { ...prev[editingCell.sku], [editingCell.field]: value || undefined },
+    }));
+    updateDescriptionMutation.mutate({
+      sku: editingCell.sku,
+      ...(editingCell.field === "title" && { title: value || undefined }),
+      ...(editingCell.field === "description" && { description: value || undefined }),
+    });
+    setEditingCell(null);
+    setEditingValue("");
+  };
+
+  const cancelEdit = () => {
+    setEditingCell(null);
+    setEditingValue("");
+  };
+
+  const toggleSelect = (sku: string) => {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sku)) next.delete(sku);
+      else next.add(sku);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedRowIds.size === filteredData.length) setSelectedRowIds(new Set());
+    else setSelectedRowIds(new Set(filteredData.map((r) => r.sku)));
+  };
+
+  const handleBulkApply = () => {
+    const skus = Array.from(selectedRowIds);
+    if (skus.length === 0) return;
+    const title = bulkTitle.trim() || undefined;
+    const description = bulkDescription.trim() || undefined;
+    if (!title && !description) {
+      toast({ title: "Enter title or description", variant: "destructive" });
+      return;
+    }
+    skus.forEach((sku) => {
+      setLocalEdits((prev) => ({
+        ...prev,
+        [sku]: {
+          ...prev[sku],
+          ...(title !== undefined && { title }),
+          ...(description !== undefined && { description }),
+        },
+      }));
+    });
+    updateDescriptionMutation.mutate({ skus, title, description });
+  };
+
   // Fallback dummy KPIs
   const dummyKpis: MismatchKPI[] = [
     { label: "Mismatch Rate", value: "3.2%", change: -12, status: "success" },
@@ -329,7 +465,16 @@ export default function MismatchEngine() {
 
   const kpis = kpisData?.kpis.length ? kpisData.kpis : dummyKpis;
   const tableData = mismatchData?.data.length ? mismatchData.data : mockTableData;
-  const filteredData = tableData; // Backend handles filtering when API is available
+  // Client-side filter for mismatches only when viewMode is "mismatches" (reduces load if backend doesn't support mismatchesOnly)
+  const filteredData =
+    viewMode === "mismatches"
+      ? tableData.filter(
+          (row) =>
+            row.mismatchScore > 0 ||
+            (row.attributeErrors?.length ?? 0) > 0 ||
+            (row.localMissing?.length ?? 0) > 0
+        )
+      : tableData;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -458,6 +603,16 @@ export default function MismatchEngine() {
             </SelectContent>
           </Select>
 
+          <Select value={viewMode} onValueChange={(v) => setViewMode(v as "mismatches" | "all")}>
+            <SelectTrigger className="w-[160px] h-10 bg-background/50 border-border/50">
+              <SelectValue placeholder="View" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mismatches">Mismatches only</SelectItem>
+              <SelectItem value="all">All (incl. matches)</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={issueType} onValueChange={setIssueType}>
             <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
               <SelectValue placeholder="Issue Type" />
@@ -540,6 +695,189 @@ export default function MismatchEngine() {
               </div>
             ))
           )}
+        </div>
+      </div>
+
+      {/* Image-Description Audit Table with inline and bulk editing */}
+      <div className="rounded-xl overflow-hidden border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in">
+        <div className="p-5 border-b border-border/50 bg-gradient-to-r from-muted/30 to-transparent flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            Image-Description Audit Table
+          </h3>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={selectAll} className="text-xs">
+              {selectedRowIds.size === filteredData.length ? "Deselect all" : "Select all"}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {filteredData.length} row{filteredData.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+
+        {/* Bulk update bar */}
+        {selectedRowIds.size > 0 && (
+          <div className="p-4 bg-primary/5 border-b border-border/50 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-foreground">{selectedRowIds.size} selected</span>
+            <Input
+              placeholder="Bulk title..."
+              className="max-w-[220px] h-9 text-sm"
+              value={bulkTitle}
+              onChange={(e) => setBulkTitle(e.target.value)}
+            />
+            <Input
+              placeholder="Bulk description..."
+              className="max-w-[280px] h-9 text-sm"
+              value={bulkDescription}
+              onChange={(e) => setBulkDescription(e.target.value)}
+            />
+            <Button size="sm" onClick={handleBulkApply} disabled={updateDescriptionMutation.isPending}>
+              {updateDescriptionMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Apply to selected
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedRowIds(new Set())}>
+              Clear selection
+            </Button>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/40 border-b border-border/50">
+                <th className="text-left font-medium text-muted-foreground p-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredData.length > 0 && selectedRowIds.size === filteredData.length}
+                    onChange={selectAll}
+                    className="rounded border-border"
+                  />
+                </th>
+                <th className="text-left font-medium text-muted-foreground p-3">SKU</th>
+                <th className="text-left font-medium text-muted-foreground p-3">Marketplace</th>
+                <th className="text-left font-medium text-muted-foreground p-3 min-w-[180px]">Title</th>
+                <th className="text-left font-medium text-muted-foreground p-3 min-w-[220px]">Description</th>
+                <th className="text-left font-medium text-muted-foreground p-3">Score</th>
+                <th className="text-left font-medium text-muted-foreground p-3">Issue</th>
+                <th className="text-left font-medium text-muted-foreground p-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mismatchLoading ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((row) => (
+                  <tr
+                    key={row.sku}
+                    className={cn(
+                      "border-t border-border/30 hover:bg-muted/20 transition-colors",
+                      selectedRowIds.has(row.sku) && "bg-primary/5"
+                    )}
+                  >
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedRowIds.has(row.sku)}
+                        onChange={() => toggleSelect(row.sku)}
+                        className="rounded border-border"
+                      />
+                    </td>
+                    <td className="p-3 font-mono text-xs">{row.sku}</td>
+                    <td className="p-3 text-muted-foreground">{row.marketplace}</td>
+                    <td className="p-3">
+                      {editingCell?.sku === row.sku && editingCell?.field === "title" ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveEdit();
+                              if (e.key === "Escape") cancelEdit();
+                            }}
+                            onBlur={saveEdit}
+                            className="h-8 text-xs min-w-[160px]"
+                          />
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={saveEdit}>
+                            <Check className="w-3.5 h-3.5 text-success" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}>
+                            <XCircle className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(row.sku, "title")}
+                          className="text-left w-full flex items-center gap-1.5 group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 min-h-[32px]"
+                        >
+                          <span className="text-foreground truncate max-w-[200px]">
+                            {getDisplayValue(row, "title") || "—"}
+                          </span>
+                          <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 text-muted-foreground shrink-0" />
+                        </button>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {editingCell?.sku === row.sku && editingCell?.field === "description" ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveEdit();
+                              if (e.key === "Escape") cancelEdit();
+                            }}
+                            onBlur={saveEdit}
+                            className="h-8 text-xs min-w-[200px]"
+                          />
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={saveEdit}>
+                            <Check className="w-3.5 h-3.5 text-success" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}>
+                            <XCircle className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(row.sku, "description")}
+                          className="text-left w-full flex items-center gap-1.5 group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 min-h-[32px]"
+                        >
+                          <span className="text-muted-foreground truncate max-w-[240px]">
+                            {getDisplayValue(row, "description") || "—"}
+                          </span>
+                          <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 text-muted-foreground shrink-0" />
+                        </button>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <Badge variant={row.mismatchScore >= 70 ? "destructive" : row.mismatchScore >= 40 ? "secondary" : "outline"}>
+                        {row.mismatchScore}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-muted-foreground text-xs">{row.issueType}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleViewDetails(row.sku)}>
+                          <Eye className="w-3.5 h-3.5 mr-1" />
+                          Details
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleFix(row.sku)}>
+                          Fix
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
