@@ -4,7 +4,7 @@
  * Backend URL: https://e-commerce-1-imageto-txt.onrender.com
  */
 
-const IMAGE_TO_TEXT_BASE_URL = "https://e-commerce-1-imageto-txt.onrender.com";
+const IMAGE_TO_TEXT_BASE_URL = import.meta.env.VITE_IMAGE_TO_TEXT_API_URL ?? "https://e-commerce-1-imageto-txt.onrender.com";
 
 export interface GenerateDescriptionResponse {
   title: string;

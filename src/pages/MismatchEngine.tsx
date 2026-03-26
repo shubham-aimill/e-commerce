@@ -202,6 +202,14 @@ export default function MismatchEngine() {
   const [bulkDescription, setBulkDescription] = useState("");
   const [bulkTitle, setBulkTitle] = useState("");
 
+  // Color Mismatch CSV table state
+  const [csvMismatchOnly, setCsvMismatchOnly] = useState(true);
+  const [csvEditingId, setCsvEditingId] = useState<string | null>(null);
+  const [csvEditingValue, setCsvEditingValue] = useState("");
+  const [csvLocalEdits, setCsvLocalEdits] = useState<Record<string, string>>({});
+  const [csvSelectedIds, setCsvSelectedIds] = useState<Set<string>>(new Set());
+  const [csvBulkName, setCsvBulkName] = useState("");
+
   // Build query params
   const queryParams = new URLSearchParams();
   if (searchQuery) queryParams.set("search", searchQuery);
@@ -356,17 +364,6 @@ export default function MismatchEngine() {
     setLanguage("all");
     setRegion("all");
     setIssueType("all");
-    toast({
-      title: "Filters cleared",
-      description: "All filters have been reset.",
-    });
-  };
-
-  const handleMoreFilters = () => {
-    toast({
-      title: "More filters",
-      description: "Additional filter options coming soon.",
-    });
   };
 
   const handleExport = () => {
@@ -466,15 +463,90 @@ export default function MismatchEngine() {
   const kpis = kpisData?.kpis.length ? kpisData.kpis : dummyKpis;
   const tableData = mismatchData?.data.length ? mismatchData.data : mockTableData;
   // Client-side filter for mismatches only when viewMode is "mismatches" (reduces load if backend doesn't support mismatchesOnly)
-  const filteredData =
-    viewMode === "mismatches"
-      ? tableData.filter(
-          (row) =>
-            row.mismatchScore > 0 ||
-            (row.attributeErrors?.length ?? 0) > 0 ||
-            (row.localMissing?.length ?? 0) > 0
-        )
-      : tableData;
+  // Marketplace → region mapping for region filter
+  const marketplaceRegionMap: Record<string, string> = {
+    "amazon.in": "india", "flipkart": "india", "myntra": "india",
+    "takealot": "south_africa", "checkers": "south_africa", "woolworths": "south_africa", "makro": "south_africa",
+    "amazon.com": "global", "ebay": "global", "walmart": "global", "shopify": "global", "magento": "global", "woocommerce": "global",
+  };
+
+  const filteredData = tableData.filter((row) => {
+    // viewMode: mismatches only
+    if (viewMode === "mismatches") {
+      const hasMismatch =
+        row.mismatchScore > 0 ||
+        (row.attributeErrors?.length ?? 0) > 0 ||
+        (row.localMissing?.length ?? 0) > 0;
+      if (!hasMismatch) return false;
+    }
+
+    // search: SKU, title, description, issueType, marketplace
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matches =
+        row.sku.toLowerCase().includes(q) ||
+        (row.title ?? "").toLowerCase().includes(q) ||
+        (row.description ?? "").toLowerCase().includes(q) ||
+        (row.issueType ?? "").toLowerCase().includes(q) ||
+        (row.marketplace ?? "").toLowerCase().includes(q) ||
+        (row.category ?? "").toLowerCase().includes(q);
+      if (!matches) return false;
+    }
+
+    // category
+    if (category !== "all") {
+      if ((row.category ?? "").toLowerCase() !== category.toLowerCase()) return false;
+    }
+
+    // marketplace (partial match so "amazon" matches "Amazon.in")
+    if (marketplace !== "all") {
+      const mpKey = marketplace.replace("-", ".").toLowerCase();
+      if (!(row.marketplace ?? "").toLowerCase().includes(mpKey)) return false;
+    }
+
+    // language: show rows where this language has a localization issue
+    if (language !== "all") {
+      if (!(row.localMissing ?? []).includes(language)) return false;
+    }
+
+    // region: infer from marketplace value
+    if (region !== "all") {
+      const rowRegion = marketplaceRegionMap[(row.marketplace ?? "").toLowerCase()] ?? "global";
+      if (rowRegion !== region) return false;
+    }
+
+    // issueType
+    if (issueType !== "all") {
+      const issueMap: Record<string, string> = {
+        color: "color mismatch",
+        size: "size mismatch",
+        local: "localization",
+      };
+      const expected = issueMap[issueType] ?? issueType;
+      if (!(row.issueType ?? "").toLowerCase().includes(expected)) return false;
+    }
+
+    return true;
+  });
+
+  const filteredCsvRows = colorCsv
+    ? colorCsv.rows
+        .filter((row) => {
+          // mismatch-only toggle
+          if (csvMismatchOnly && row["Verdict"] === "Match") return false;
+          // search: product name, ID, catalog color, detected color
+          if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            const name = String(row["productDisplayName"] ?? "").toLowerCase();
+            const id = String(row["id"] ?? "").toLowerCase();
+            const color = String(row[colorCsv.color_column ?? "baseColour"] ?? "").toLowerCase();
+            const detected = String(row["detected_color"] ?? "").toLowerCase();
+            if (!name.includes(q) && !id.includes(q) && !color.includes(q) && !detected.includes(q)) return false;
+          }
+          return true;
+        })
+        .slice(0, 50)
+    : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -524,7 +596,7 @@ export default function MismatchEngine() {
           </div>
           
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
+            <SelectTrigger className={cn("w-[140px] h-10 bg-background/50 border-border/50", category !== "all" && "border-primary/60 bg-primary/5 text-primary")}>
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -538,7 +610,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={brand} onValueChange={setBrand}>
-            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
+            <SelectTrigger className={cn("w-[140px] h-10 bg-background/50 border-border/50", brand !== "all" && "border-primary/60 bg-primary/5 text-primary")}>
               <SelectValue placeholder="Brand" />
             </SelectTrigger>
             <SelectContent>
@@ -550,7 +622,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={marketplace} onValueChange={setMarketplace}>
-            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
+            <SelectTrigger className={cn("w-[140px] h-10 bg-background/50 border-border/50", marketplace !== "all" && "border-primary/60 bg-primary/5 text-primary")}>
               <SelectValue placeholder="Marketplace" />
             </SelectTrigger>
             <SelectContent>
@@ -572,7 +644,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
+            <SelectTrigger className={cn("w-[140px] h-10 bg-background/50 border-border/50", language !== "all" && "border-primary/60 bg-primary/5 text-primary")}>
               <SelectValue placeholder="Language" />
             </SelectTrigger>
             <SelectContent>
@@ -592,7 +664,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={region} onValueChange={setRegion}>
-            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
+            <SelectTrigger className={cn("w-[140px] h-10 bg-background/50 border-border/50", region !== "all" && "border-primary/60 bg-primary/5 text-primary")}>
               <SelectValue placeholder="Country/Region" />
             </SelectTrigger>
             <SelectContent>
@@ -614,7 +686,7 @@ export default function MismatchEngine() {
           </Select>
 
           <Select value={issueType} onValueChange={setIssueType}>
-            <SelectTrigger className="w-[140px] h-10 bg-background/50 border-border/50">
+            <SelectTrigger className={cn("w-[140px] h-10 bg-background/50 border-border/50", issueType !== "all" && "border-primary/60 bg-primary/5 text-primary")}>
               <SelectValue placeholder="Issue Type" />
             </SelectTrigger>
             <SelectContent>
@@ -629,7 +701,7 @@ export default function MismatchEngine() {
             variant="outline" 
             size="sm" 
             className="gap-2 h-10 hover:bg-muted/50 transition-colors" 
-            onClick={handleMoreFilters}
+            onClick={() => {}}
           >
             <Filter className="w-4 h-4" />
             More Filters
@@ -645,6 +717,75 @@ export default function MismatchEngine() {
           </Button>
         </div>
       </div>
+
+      {/* Active Filter Chips */}
+      {(searchQuery || category !== "all" || brand !== "all" || marketplace !== "all" || language !== "all" || region !== "all" || issueType !== "all") && (
+        <div className="flex flex-wrap items-center gap-2 px-1">
+          <span className="text-xs text-muted-foreground font-medium shrink-0">Active filters:</span>
+          {searchQuery && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal">
+              Search: &ldquo;{searchQuery}&rdquo;
+              <button onClick={() => setSearchQuery("")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {category !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal capitalize">
+              Category: {category}
+              <button onClick={() => setCategory("all")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {brand !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal">
+              Brand: {brand}
+              <button onClick={() => setBrand("all")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {marketplace !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal capitalize">
+              Market: {marketplace.replace("-", ".")}
+              <button onClick={() => setMarketplace("all")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {language !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal uppercase">
+              Language: {language}
+              <button onClick={() => setLanguage("all")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {region !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal capitalize">
+              Region: {region.replace("_", " ")}
+              <button onClick={() => setRegion("all")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {issueType !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs font-normal">
+              Issue: {issueType === "color" ? "Color Mismatch" : issueType === "size" ? "Size Mismatch" : "Localization"}
+              <button onClick={() => setIssueType("all")} className="ml-1 opacity-60 hover:opacity-100">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          <span className="text-xs text-muted-foreground">
+            — {filteredData.length} result{filteredData.length !== 1 ? "s" : ""}
+          </span>
+          <button onClick={handleClearFilters} className="text-xs text-primary hover:underline ml-1">
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* Enhanced KPI Row */}
       <div className="space-y-4">
@@ -886,7 +1027,7 @@ export default function MismatchEngine() {
         {/* Color Mismatch CSV Section */}
         <div className="lg:col-span-2">
           <div className="rounded-xl overflow-hidden border border-border/50 bg-card/50 backdrop-blur-sm shadow-lg animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'forwards', animationDuration: '500ms' }}>
-            <div className="p-5 border-b border-border/50 bg-gradient-to-r from-muted/30 to-transparent flex items-center justify-between">
+            <div className="p-5 border-b border-border/50 bg-gradient-to-r from-muted/30 to-transparent flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-destructive" />
@@ -896,9 +1037,19 @@ export default function MismatchEngine() {
                   Snapshot of the processed CSV used by the Product Color Mismatch detector.
                 </p>
               </div>
-              <Badge variant="outline" className="text-[10px]">
-                CSV
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={csvMismatchOnly ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs h-8"
+                  onClick={() => setCsvMismatchOnly((v) => !v)}
+                >
+                  {csvMismatchOnly ? "Mismatches only" : "All results"}
+                </Button>
+                <Badge variant="outline" className="text-[10px]">
+                  CSV
+                </Badge>
+              </div>
             </div>
 
             {isColorCsvLoading && (
@@ -920,66 +1071,172 @@ export default function MismatchEngine() {
             )}
 
             {colorCsv && !isColorCsvLoading && !isColorCsvError && (
-              <div className="overflow-x-auto p-4">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
-                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Image</th>
-                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">ID</th>
-                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Product</th>
-                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Catalog Color</th>
-                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Detected Color</th>
-                      <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Verdict</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {colorCsv.rows.slice(0, 20).map((row, idx) => (
-                      <tr
-                        key={(row["id"] as string | number | undefined) ?? idx}
-                        className="border-t border-border/30 hover:bg-muted/30 transition-all duration-200"
-                      >
-                        <td className="p-3">
-                          <ProductImage
-                            productId={String(row["id"] ?? "")}
-                            index={idx}
-                            alt={String(row["productDisplayName"] ?? "Product")}
-                            className="w-16 h-16"
-                            fallbackClassName="w-16 h-16"
+              <>
+                {csvSelectedIds.size > 0 && (
+                  <div className="p-4 bg-primary/5 border-b border-border/50 flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-foreground">{csvSelectedIds.size} selected</span>
+                    <Input
+                      placeholder="Bulk product name..."
+                      className="max-w-[280px] h-9 text-sm"
+                      value={csvBulkName}
+                      onChange={(e) => setCsvBulkName(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const name = csvBulkName.trim();
+                        if (!name) { toast({ title: "Enter a product name", variant: "destructive" }); return; }
+                        setCsvSelectedIds((prev) => {
+                          prev.forEach((id) => setCsvLocalEdits((edits) => ({ ...edits, [id]: name })));
+                          return new Set();
+                        });
+                        setCsvBulkName("");
+                        toast({ title: "Bulk update applied", description: `${csvSelectedIds.size} product(s) updated.` });
+                      }}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      Apply to selected
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setCsvSelectedIds(new Set())}>
+                      Clear selection
+                    </Button>
+                  </div>
+                )}
+                <div className="overflow-x-auto p-4">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
+                        <th className="text-left font-medium text-muted-foreground p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={filteredCsvRows.length > 0 && csvSelectedIds.size === filteredCsvRows.length}
+                            onChange={() => {
+                              if (csvSelectedIds.size === filteredCsvRows.length) setCsvSelectedIds(new Set());
+                              else setCsvSelectedIds(new Set(filteredCsvRows.map((r) => String(r["id"] ?? ""))));
+                            }}
+                            className="rounded border-border"
                           />
-                        </td>
-                        <td className="p-3 font-mono text-sm">
-                          {String(row["id"] ?? "-")}
-                        </td>
-                        <td className="p-3 text-sm">
-                          {String(row["productDisplayName"] ?? "")}
-                        </td>
-                        <td className="p-3 text-sm">
-                          {String(
-                            row[colorCsv.color_column ?? "baseColour"] ?? ""
-                          )}
-                        </td>
-                        <td className="p-3 text-sm">
-                          {String(row["detected_color"] ?? "")}
-                        </td>
-                        <td className="p-3">
-                          <Badge
-                            variant={
-                              row["Verdict"] === "Match" ? "outline" : "destructive"
-                            }
-                            className="text-xs"
-                          >
-                            {String(row["Verdict"] ?? "")}
-                          </Badge>
-                        </td>
+                        </th>
+                        <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Image</th>
+                        <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">ID</th>
+                        <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider min-w-[200px]">Product</th>
+                        <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Catalog Color</th>
+                        <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Detected Color</th>
+                        <th className="text-left font-medium text-muted-foreground p-3 uppercase tracking-wider">Verdict</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="mt-4 text-xs text-muted-foreground text-center">
-                  Showing first 20 rows from{" "}
-                  <code className="bg-muted px-1.5 py-0.5 rounded">hf_products_with_verdict.csv</code>.
-                </p>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredCsvRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-sm text-muted-foreground">
+                            {csvMismatchOnly ? "No mismatches found." : "No data available."}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCsvRows.map((row, idx) => {
+                          const rowId = String(row["id"] ?? idx);
+                          const isSelected = csvSelectedIds.has(rowId);
+                          const isEditing = csvEditingId === rowId;
+                          const displayName = csvLocalEdits[rowId] ?? String(row["productDisplayName"] ?? "");
+                          return (
+                            <tr
+                              key={rowId}
+                              className={cn(
+                                "border-t border-border/30 hover:bg-muted/30 transition-all duration-200",
+                                isSelected && "bg-primary/5"
+                              )}
+                            >
+                              <td className="p-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setCsvSelectedIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(rowId)) next.delete(rowId);
+                                      else next.add(rowId);
+                                      return next;
+                                    });
+                                  }}
+                                  className="rounded border-border"
+                                />
+                              </td>
+                              <td className="p-3">
+                                <ProductImage
+                                  productId={String(row["id"] ?? "")}
+                                  index={idx}
+                                  alt={displayName}
+                                  className="w-16 h-16"
+                                  fallbackClassName="w-16 h-16"
+                                />
+                              </td>
+                              <td className="p-3 font-mono text-sm">{String(row["id"] ?? "-")}</td>
+                              <td className="p-3 text-sm">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      autoFocus
+                                      value={csvEditingValue}
+                                      onChange={(e) => setCsvEditingValue(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          setCsvLocalEdits((prev) => ({ ...prev, [rowId]: csvEditingValue.trim() }));
+                                          setCsvEditingId(null);
+                                          setCsvEditingValue("");
+                                        }
+                                        if (e.key === "Escape") { setCsvEditingId(null); setCsvEditingValue(""); }
+                                      }}
+                                      onBlur={() => {
+                                        setCsvLocalEdits((prev) => ({ ...prev, [rowId]: csvEditingValue.trim() }));
+                                        setCsvEditingId(null);
+                                        setCsvEditingValue("");
+                                      }}
+                                      className="h-8 text-xs min-w-[160px]"
+                                    />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                      setCsvLocalEdits((prev) => ({ ...prev, [rowId]: csvEditingValue.trim() }));
+                                      setCsvEditingId(null);
+                                      setCsvEditingValue("");
+                                    }}>
+                                      <Check className="w-3.5 h-3.5 text-success" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setCsvEditingId(null); setCsvEditingValue(""); }}>
+                                      <XCircle className="w-3.5 h-3.5 text-destructive" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setCsvEditingId(rowId); setCsvEditingValue(displayName); }}
+                                    className="text-left w-full flex items-center gap-1.5 group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 min-h-[32px]"
+                                  >
+                                    <span className="text-foreground truncate max-w-[220px]">{displayName || "—"}</span>
+                                    <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 text-muted-foreground shrink-0" />
+                                  </button>
+                                )}
+                              </td>
+                              <td className="p-3 text-sm">{String(row[colorCsv.color_column ?? "baseColour"] ?? "")}</td>
+                              <td className="p-3 text-sm">{String(row["detected_color"] ?? "")}</td>
+                              <td className="p-3">
+                                <Badge
+                                  variant={row["Verdict"] === "Match" ? "outline" : "destructive"}
+                                  className="text-xs"
+                                >
+                                  {String(row["Verdict"] ?? "")}
+                                </Badge>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                  <p className="mt-4 text-xs text-muted-foreground text-center">
+                    Showing {filteredCsvRows.length} {csvMismatchOnly ? "mismatch" : ""} row{filteredCsvRows.length !== 1 ? "s" : ""} from{" "}
+                    <code className="bg-muted px-1.5 py-0.5 rounded">hf_products_with_verdict.csv</code>.
+                  </p>
+                </div>
+              </>
             )}
           </div>
         </div>
